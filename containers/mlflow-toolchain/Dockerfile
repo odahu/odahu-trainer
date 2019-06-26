@@ -43,12 +43,9 @@ RUN pip install --no-cache-dir mlflow==${MLFLOW_VERSION}
 
 # Copy targets to /legion-cmd and make it exucatable
 COPY runner.py \
-     builder.py \
-     serving.py \
-     entrypoint.sh \
-     Dockerfile.template \
+     entrypoint.py \
      /legion-cmd/
 
-RUN chmod +x /legion-cmd/*.py && chmod +x /legion-cmd/*.sh
+RUN chmod +x /legion-cmd/*.py
 
 CMD [ "/bin/bash" ]
