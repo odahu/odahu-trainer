@@ -1,0 +1,13 @@
+apiVersion: legion.legion-platform.org/v1alpha1
+kind: ModelTraining
+metadata:
+  name: flower-classifier
+spec:
+  toolchain: legion-mlflow
+  vcsName: legion
+  workDir: examples/flower_classifier
+  entrypoint: main
+  modelFile: model
+  experiment: exp2  # name of experiment
+  hyperparameters:
+    epochs: 3
