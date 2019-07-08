@@ -1,0 +1,15 @@
+{{- if .Values.toolchain_integration.enabled -}}
+apiVersion: legion.legion-platform.org/v1alpha1
+kind: ToolchainIntegration
+metadata:
+  labels:
+    controller-tools.k8s.io: "1.0"
+    {{- include "legion.helm-labels" . | nindent 4 }}
+  name: mlflow-integration
+spec:
+  entrypoint: "/legion-cmd/runner.py"
+  defaultImage: "{{ include "legion.image-name" (dict "root" . "service" .Values.tracking_server "tpl" "%slegion-mlflow-toolchain:%s") }}"
+  additionalEnvirnoment:
+  - name: MLFLOW_TRACKING_URL
+    value: "http://{{ .Release.Name }}-legion-mlflow-tracking-server:{{ .Values.tracking_server.port }}"
+{{- end }}

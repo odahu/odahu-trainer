@@ -1,0 +1,203 @@
+import java.text.SimpleDateFormat
+
+class Globals {
+    static String rootCommit = null
+    static String buildVersion = null
+    static String dockerLabels = null
+    static String dockerCacheArg = null
+}
+
+pipeline {
+    agent { label 'ec2builder'}
+
+    options{
+            buildDiscarder(logRotator(numToKeepStr: '35', artifactNumToKeepStr: '35'))
+    }
+    environment {
+            /// Input parameters
+            //Enable docker cache parameter
+            param_enable_docker_cache = "${params.EnableDockerCache}"
+            //Build major version release and optionally push it to public repositories
+            param_stable_release = "${params.StableRelease}"
+            //Release version to tag all artifacts to
+            param_release_version = "${params.ReleaseVersion}"
+            //Git Branch to build package from
+            param_git_branch = "${params.GitBranch}"
+            //Legion Infra repo url (for pipeline methods import)
+            param_legion_infra_repo = "${params.LegionInfraRepo}"
+            //Legion repo version tag (tag or branch name)
+            param_legion_infra_version_tag = "${params.LegionInfraVersionTag}"
+            //Push release git tag
+            param_push_git_tag = "${params.PushGitTag}"
+            //Rewrite git tag i exists
+            param_force_tag_push = "${params.ForceTagPush}"
+            //Push release to master bransh
+            param_update_master = "${params.UpdateMaster}"
+            //Set next releases version explicitly
+            param_next_version = "${params.NextVersion}"
+            // Update version string
+            param_update_version_string = "${params.UpdateVersionString}"
+            // Release version to be used as docker cache source
+            param_docker_cache_source = "${params.DockerCacheSource}"
+            //Artifacts storage parameters
+            param_helm_repo_git_url = "${params.HelmRepoGitUrl}"
+            param_helm_repo_git_branch = "${params.HelmRepoGitBranch}"
+            param_helm_repository = "${params.HelmRepository}"
+            param_docker_registry = "${params.DockerRegistry}"
+            param_docker_hub_registry = "${params.DockerHubRegistry}"
+            param_git_deploy_key = "${params.GitDeployKey}"
+            ///Job parameters
+            updateVersionScript = "scripts/update_version_id.py"
+            sharedLibPath = "pipelines/legionPipeline.groovy"
+            pathToCharts= "${WORKSPACE}/helms"
+    }
+
+    stages {
+        stage('Checkout and set build vars') {
+            steps {
+                cleanWs()
+                checkout scm
+                script {
+                    sh 'echo RunningOn: $(curl http://checkip.amazonaws.com/)'
+
+                    // import Legion components
+                    dir("${WORKSPACE}/legion-aws") {
+                        print ("Checkout Legion-infra repo")
+                        checkout scm: [$class: 'GitSCM', userRemoteConfigs: [[url: "${env.param_legion_infra_repo}"]], branches: [[name: "refs/tags/${env.param_legion_infra_version_tag}"]]], poll: false
+
+                        print ("Load legion pipeline common library")
+                        legion = load "${env.sharedLibPath}"
+                    }
+
+                    print("Check code for security issues")
+                    sh "bash install-git-secrets-hook.sh install_hooks && git secrets --scan -r"
+
+                    legion.setBuildMeta(env.updateVersionScript)
+
+                }
+            }
+        }
+
+        // Set Git Tag in case of stable release
+        stage('Set GIT release Tag'){
+            steps {
+                script {
+                    print (env.param_stable_release)
+                    if (env.param_stable_release.toBoolean() && env.param_push_git_tag.toBoolean()){
+                        legion.setGitReleaseTag()
+                    }
+                    else {
+                        print("Skipping release git tag push")
+                    }
+                }
+            }
+        }
+
+        stage("Docker login") {
+            steps {
+                withCredentials([[
+                 $class: 'UsernamePasswordMultiBinding',
+                 credentialsId: 'nexus-local-repository',
+                 usernameVariable: 'USERNAME',
+                 passwordVariable: 'PASSWORD']]) {
+                    sh "docker login -u ${USERNAME} -p ${PASSWORD} ${env.param_docker_registry}"
+                }
+                script {
+                    if (env.param_stable_release.toBoolean()) {
+                        withCredentials([[
+                        $class: 'UsernamePasswordMultiBinding',
+                        credentialsId: 'dockerhub',
+                        usernameVariable: 'USERNAME',
+                        passwordVariable: 'PASSWORD']]) {
+                            sh "docker login -u ${USERNAME} -p ${PASSWORD}"
+                        }
+                    }
+                }
+            }
+        }
+        stage("Build Docker images & Run Tests") {
+            parallel {
+                stage("Build & upload toolchain Docker image"){
+                    steps {
+                        script {
+                            legion.buildLegionImage('legion-mlflow-toolchain', '.', 'containers/mlflow-toolchain/Dockerfile')
+                            legion.uploadDockerImage('legion-mlflow-toolchain')
+                        }
+                    }
+                }
+                stage('Build & upload tracking-server Docker image') {
+                    steps {
+                        script {
+                            legion.buildLegionImage('legion-mlflow-tracking-server', '.', 'containers/mlflow-tracking-server/Dockerfile')
+                            legion.uploadDockerImage('legion-mlflow-tracking-server')
+                        }
+                    }
+                }
+                stage('Build & upload pipline-agent Docker image') {
+                    steps {
+                        script {
+                            legion.buildLegionImage('legion-mlflow-pipeline-agent', '.', 'containers/mlflow-pipeline-agent/Dockerfile')
+                            legion.uploadDockerImage('legion-mlflow-pipeline-agent')
+                        }
+                    }
+                }
+            }
+        }
+        stage('Upload artifacts'){
+            parallel {
+                stage('Package and upload helm charts'){
+                    steps {
+                        script {
+                            docker.image("legion/legion-mlflow-pipeline-agent:${Globals.buildVersion}").inside("-v /var/run/docker.sock:/var/run/docker.sock -u root") {
+                                legion.uploadHelmCharts(env.pathToCharts)
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        stage("Update Legion version string") {
+            steps {
+                script {
+                    if (env.param_stable_release.toBoolean() && env.param_update_version_string.toBoolean()) {
+                        legion.updateVersionString('__version__.py')
+                    }
+                    else {
+                        print("Skipping version string update")
+                    }
+                }
+            }
+        }
+
+        stage('Update Master branch'){
+            steps {
+                script {
+                    if (env.param_update_master.toBoolean()){
+                        legion.updateMasterBranch()
+                    }
+                    else {
+                        print("Skipping Master branch update")
+                    }
+                }
+            }
+        }
+    }
+
+    post {
+        always {
+            script {
+                // import Legion components
+                dir("${WORKSPACE}/legion-aws") {
+                    print ("Checkout Legion-infra repo")
+                    checkout scm: [$class: 'GitSCM', userRemoteConfigs: [[url: "${env.param_legion_infra_repo}"]], branches: [[name: "refs/tags/${env.param_legion_infra_version_tag}"]]], poll: false
+
+                    print ("Load legion pipeline common library")
+                    legion = load "${env.sharedLibPath}"
+                }
+                legion.notifyBuild(currentBuild.currentResult)
+            }
+            deleteDir()
+        }
+    }
+}

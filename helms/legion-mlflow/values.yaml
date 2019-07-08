@@ -1,0 +1,139 @@
+# Version of Toolchain
+# By default .Chart.AppVersion version is used
+# Type: string
+# toolchainVersion: "1.0"
+
+# Docker images registry
+# This registry will be used for automatic docker image name deduction based on Legion naming for images
+# Each image could be overridden manually in .<service>.image, please see .edi root section or other
+# Type: string
+imagesRegistry: legionplatform/
+
+# Verbosity of logging features in components
+# Valid values are:
+# - info
+# - debug
+# - warning
+# - error
+logLevel: info
+
+# Configuration of Legion ingresses
+# Ingresses are for next <service>s
+# - edi
+# - edge
+ingress:
+  # Global flag for Ingress enabling
+  # Each Ingress could be configured manually in .<service>.ingress.enabled
+  # Type: bool
+  enabled: false
+
+  # Root domain for auto-created Ingress domains.
+  # Each domain could be configured manually in .<service>.ingress.domain
+  # Also it controls building URLs for external resources such as auth endpoint
+  # Type: string
+  globalDomain: example.com
+
+  # Global annotations for all services
+  # Each Ingress could be configured manually in .<service>.ingress.annotations
+  # Type: string->string map
+  annotations: {}
+  #  kubernetes.io/ingress.class: nginx
+  #  kubernetes.io/tls-acme: "true"
+
+  # Global TLS flag
+  # Each Ingress could be configured manually in .<service>.ingress.tlsEnabled
+  # Also it controls building URLs for external resources such as auth endpoint
+  # Type: bool
+  tlsEnabled: false
+
+  # Global TLS secret name
+  # Each Ingress could be configured manually in .<service>.ingress.tlsSecretName
+  # Type: string
+  tlsSecretName: ~
+
+# Security configuration.
+security:
+  # Is authorization for WEB requests enabled or not
+  # Type: bool
+  enabled: false
+
+  # Type of authorization. Currently only oauth2_proxy is supported
+  # Valid values are:
+  # - oauth2_proxy
+  integration: oauth2_proxy
+
+  # Detail configuration of oauth2_proxy
+  oauth2_proxy:
+    # Internal URL of oauth2_proxy that will be called on each Ingress request. Is used in auth_request directive on Ingress Nginx
+    # Type: string
+    url: http://oauth2-proxy.kube-system.svc.cluster.local:4180/oauth2/auth
+
+    # Public URL on which user will be redirected for authrorization
+    # Uncomment for custom public URL, otherwise auth.<ingress.globalDomain> will be used
+    # besides standard Nginx Ingress variables, escaped_request_uri is available too
+    # Type: string
+    # public_url: https://auth.my-company.com/oauth2/start?rd=https://$host$escaped_request_uri
+
+# Tracking Server server configuration
+tracking_server:
+  # Tracking Server might be disabled
+  # Type: bool
+  enabled: true
+
+  # This variable can be uncommented to setup custom image name for Tracking Server
+  # Type: string
+  # image: custom-image:1.0
+
+  # Count of Tracking Server replicas
+  # Type: integer
+  replicas: 1
+
+  # Port on which EDI listens income traffic
+  # Type: integer
+  port: 80
+
+  # Resources for each instance
+  # For declaration format see https://kubernetes.io/docs/concepts/configuration/manage-compute-resources-container/
+  resources:
+    requests:
+      cpu: "50m"
+      memory: "128Mi"
+    limits:
+      cpu: "100m"
+      memory: "512Mi"
+
+  # Configuration of ingress object
+  ingress:
+    # Custom enabling/disabling of Ingress resource for Tracking Server
+    # To use specific value, uncomment and replace ~ with target value
+    # Type: bool
+    # enabled: ~
+
+    # Annotations for ingress
+    # Will be added to global annotations (.ingress.annotations)
+    # Type: string->string map
+    annotations: {}
+
+    # Custom domain name
+    # By default domain name "mlflow-tracking-server.<..ingress.globalDomain>" is used
+    # To use specific value, replace ~ with target value
+    # Type: string
+    # domain: ~
+
+    # Is TLS enabled for this Ingress or not
+    # By default global variable is used (.ingress.tlsEnabled)
+    # To use specific value, replace ~ with target value
+    # Type: string
+    # tlsEnabled: false
+
+    # Global TLS secret name
+    # By default global variable is used (.ingress.tlsSecretName)
+    # To use specific value, replace ~ with target value
+    # Type: string
+    # tlsSecretName: ~
+
+# Toolchain Integration entity configuration
+toolchain_integration:
+  # Toolchain Integration might be disabled
+  # Type: bool
+  enabled: true

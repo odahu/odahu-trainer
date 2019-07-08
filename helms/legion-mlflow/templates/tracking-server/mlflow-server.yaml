@@ -1,0 +1,55 @@
+{{- if .Values.tracking_server.enabled -}}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: "{{ .Release.Name }}-legion-mlflow-tracking-server"
+  labels:
+    component: "legion-mlflow-tracking-server"
+    {{- include "legion.helm-labels" . | nindent 4 }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      component: "legion-mlflow-tracking-server"
+      {{- include "legion.helm-labels-for-search" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        component: "legion-mlflow-tracking-server"
+        {{- include "legion.helm-labels" . | nindent 8 }}
+    spec:
+      containers:
+      - name: mlflow
+        image: "{{ include "legion.image-name" (dict "root" . "service" .Values.tracking_server "tpl" "%slegion-mlflow-tracking-server:%s") }}"
+        resources:
+          {{- toYaml .Values.tracking_server.resources | nindent 10 }}
+        ports:
+        - containerPort: 5000
+          name: api
+          protocol: TCP
+        livenessProbe:
+          httpGet:
+            path: /
+            port: 5000
+          initialDelaySeconds: 120
+          timeoutSeconds: 8
+          failureThreshold: 5
+          periodSeconds: 10
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: "{{ .Release.Name }}-legion-mlflow-tracking-server"
+  labels:
+    component: "legion-mlflow-tracking-server"
+    {{- include "legion.helm-labels" . | nindent 4 }}
+spec:
+  selector:
+    component: "legion-mlflow-tracking-server"
+    {{- include "legion.helm-labels-for-search" . | nindent 4 }}
+  ports:
+  - name: api
+    targetPort: 5000
+    port: {{ .Values.tracking_server.port }}
+    protocol: TCP
+{{- end }}
