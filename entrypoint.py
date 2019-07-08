@@ -1,188 +1,194 @@
 import os
 import json
-import time
+import typing
 import functools
-import sys
 
+# Third-party modules (is provided by MLFlow)
 import numpy as np
 import pandas as pd
+import pandas.api.types as pdt
 
+# MLFlow packages
 import mlflow.models
 import mlflow.pyfunc
 
 
+# Storage of loaded prediction function
 MODEL_FLAVOR = None
-MODEL_NAME = os.getenv('MODEL_NAME', 'model')
-MODEL_LOCATION = os.getenv('MODEL_LOCATION', 'model')
-MODEL_DATA_HEAD_FILE = os.path.join(MODEL_LOCATION, 'head.pkl')
+
+# Path to model's root
+MODEL_LOCATION = os.getenv('MODEL_LOCATION', '.')
+
+# Optional. Examples of input and output pandas DataFrames
+MODEL_INPUT_SAMPLE_FILE = os.path.join(MODEL_LOCATION, 'head_input.pkl')
+MODEL_OUTPUT_SAMPLE_FILE = os.path.join(MODEL_LOCATION, 'head_output.pkl')
 
 
-class Timer:
-    def __init__(self, name='UNKNOWN'):
-        self.name = name
+def _type_to_open_api_format(t: type) -> typing.Optional[str]:
+    """
+    Convert type of column to OpenAPI type name
 
-    def __enter__(self):
-        self.start = time.clock()
-        return self
+    :param t: object's type
+    :type t: type
+    :return: typing.Optional[str] -- name for OpenAPI
+    """
+    if isinstance(t, (str, bytes, bytearray)):
+        return 'string'
+    if isinstance(t, bool):
+        return 'boolean'
+    if isinstance(t, int):
+        return 'integer'
+    if isinstance(t, float):
+        return 'number'
 
-    def __exit__(self, *args):
-        self.end = time.clock()
-        self.interval = self.end - self.start
-        print('{} took {}'.format(self.name, self.interval))
+    if pdt.is_integer_dtype(t):
+        return 'integer'
+
+    if pdt.is_float_dtype(t):
+        return 'number'
+
+    if pdt.is_string_dtype(t):
+        return 'string'
+
+    if pdt.is_bool_dtype(t) or pdt.is_complex_dtype(t):
+        return 'string'
+
+    return None
 
 
 class NumpyEncoder(json.JSONEncoder):
-    ''' Special json encoder for numpy types.
-    Note that some numpy types doesn't have native python equivalence,
-    hence json.dumps will raise TypeError.
-    In this case, you'll need to convert your numpy types into its closest python equivalence.
-    '''
-    def default(self, o):  # pylint: disable=E0202
+    """
+    Converts Numpy objects to Python's core objects
+    """
+    def default(self, o):
         if isinstance(o, np.generic):
-            return np.asscalar(o)
+            return o.item()
         return json.JSONEncoder.default(self, o)
 
 
-def _get_jsonable_obj(data, pandas_orient='records'):
-    '''Attempt to make the data json-able via standard library.
-    Look for some commonly used types that are not jsonable and convert them into json-able ones.
-    Unknown data types are returned as is.
-
-    :param data: data to be converted, works with pandas and numpy, rest will be returned as is.
-    :param pandas_orient: If `data` is a Pandas DataFrame, it will be converted to a JSON
-                          dictionary using this Pandas serialization orientation.
-    '''
-    if isinstance(data, np.ndarray):
-        return data.tolist()
-    if isinstance(data, pd.DataFrame):
-        return data.to_dict(orient=pandas_orient)
-    if isinstance(data, pd.Series):
-        return pd.DataFrame(data).to_dict(orient=pandas_orient)
-    else:  # by default just return whatever this is and hope for the best
-        return data
-
-
-# def parse_json_input(json_input, orient='split'):
-#     '''
-#     :param json_input: A JSON-formatted string representation of a Pandas DataFrame, or a stream
-#                        containing such a string representation.
-#     :param orient: The Pandas DataFrame orientation of the JSON input. This is either 'split'
-#                    or 'records'.
-#     '''
-#     return pd.DataFrame(data=json_input['data'], columns=json_input['columns'])
-
-
 def init():
+    """
+    Initialize model and return prediction type
+
+    :return: str -- prediction type (matrix or objects)
+    """
     model = mlflow.models.Model.load(MODEL_LOCATION)
     if mlflow.pyfunc.FLAVOR_NAME not in model.flavors:
         raise ValueError('{} not in model\'s flavors'.format(mlflow.pyfunc.FLAVOR_NAME))
 
     global MODEL_FLAVOR
     MODEL_FLAVOR = mlflow.pyfunc.load_model(MODEL_LOCATION)
+    return 'matrix'
 
 
-def predict(input_object_or_dict):
-    #with Timer('Parsing of JSON input to DataFrame (already de-serialized)'):
-    #    df = pd.DataFrame({k: [v] for k, v in input_object_or_dict.items()})
-    #    #df = parse_json_input(input_object_or_dict)
+def predict_on_matrix(input_matrix, provided_columns_names=None):
+    """
+    Make prediction on a Matrix of values
 
-    columns = columns_order()
-    if not columns:
-        raise Exception('Columns order is unknown during inference phase')
+    :param input_matrix: data for prediction
+    :type input_matrix: List[List[Any]]
+    :param provided_columns_names: (Optional). Name of columns for provided matrix.
+    :type provided_columns_names: typing.Optional[typing.List[str]]
+    :return: typing.Tuple[List[List[Any]]], typing.Tuple[str, ...] -- result matrix and result column names
+    """
+    if provided_columns_names:
+        input_matrix = pd.DataFrame(input_matrix, columns=provided_columns_names)
+    else:
+        input_matrix = pd.DataFrame(input_matrix)
 
-    input_vector = [[input_object_or_dict[column] for column in columns]]
-    #input_vector = [list(input_object_or_dict.values())]
+    input_sample = _input_df_sample()
+    output_sample = _output_df_sample()
 
-    with Timer('Executing prediction on parsed DataFrame'):
-        #result = MODEL_FLAVOR.predict(df)
-        result = MODEL_FLAVOR.predict(input_vector)
-    return _get_jsonable_obj(result[0])
+    if provided_columns_names and input_sample is not None:
+        input_matrix = input_matrix.reindex_like(input_sample)
 
+    result = MODEL_FLAVOR.predict(input_matrix)
 
-def predict_matrix(input_matrix):
-    with Timer('Executing prediction on matrix'):
-        result = MODEL_FLAVOR.predict([input_matrix])
-    return _get_jsonable_obj(result[0])
+    # Register column names, overwrite if we've a sample
+    result_columns = result.columns
+    if output_sample is not None:
+        result_columns = output_sample.columns
+
+    output_matrix = result.to_numpy().tolist()
+
+    return output_matrix, tuple(result_columns)
 
 
 @functools.lru_cache()
-def columns_order():
-    if os.path.exists(MODEL_DATA_HEAD_FILE):
-        head = pd.read_pickle(MODEL_DATA_HEAD_FILE)
-    else:
-        print('Columns order can not be captured', file=sys.__stderr__)
-        return None
+def _input_df_sample():
+    """
+    Internal function for getting input DataFrame sample
 
-    return tuple(head.columns)
+    :return: typing.Optional[pandas.DataFrame] -- input sample if provided
+    """
+    if os.path.exists(MODEL_INPUT_SAMPLE_FILE):
+        return pd.read_pickle(MODEL_INPUT_SAMPLE_FILE)
+    else:
+        return None
 
 
 @functools.lru_cache()
-def info():
-    if os.path.exists(MODEL_DATA_HEAD_FILE):
-        head = pd.read_pickle(MODEL_DATA_HEAD_FILE)
-        print(list(head.columns))
+def _output_df_sample():
+    """
+    Internal function for getting output DataFrame sample
+
+    :return: typing.Optional[pandas.DataFrame] -- input sample if provided
+    """
+    if os.path.exists(MODEL_OUTPUT_SAMPLE_FILE):
+        return pd.read_pickle(MODEL_OUTPUT_SAMPLE_FILE)
     else:
-        print('Columns order can not be captured', file=sys.__stderr__)
         return None
 
+
+def _extract_df_properties(df: pd.DataFrame) -> dict:
+    """
+    Extract OpenAPI specification for pd.DataFrame columns
+
+    :param df: pandas DataFrame
+    :type df: pd.DataFrame
+    :return: dict[str, dict] -- OpenAPI specification for parameters (each columns is parameter)
+    """
     return {
-        'title': 'PredictionParameters',
-        'description': 'Parameters for prediction',
-        'type': 'object',
-        'properties': {
-            column: {
-                'title': column,
-                'type': head.dtypes[pos]
-            }
-            for pos, column in enumerate(head.columns)
-        },
-        'required': list(head.columns),
+        column: {
+            'title': column,
+            'type': _type_to_open_api_format(df.dtypes[pos])
+        }
+        for pos, column in enumerate(df.columns)
     }
 
 
-def get_json_encoder() -> type:
+@functools.lru_cache()
+def info() -> typing.Dict[str, dict]:
+    """
+    Get input and output schemas
+
+    :return: typing.Dict[str, dict] -- OpenAPI specifications. Each specification is assigned to key (input / output)
+    """
+    input_sample = _input_df_sample()
+    output_sample = _output_df_sample()
+
+    return {
+        'input': {
+            'title': 'PredictionParameters',
+            'description': 'Parameters for prediction',
+            'type': 'object',
+            'properties': _extract_df_properties(input_sample),
+            'required': list(input_sample.columns),
+        } if input_sample is not None else None,
+        'output': {
+            'title': 'PredictionResults',
+            'description': 'Results of prediction',
+            'type': 'object',
+            'properties': _extract_df_properties(output_sample),
+            'required': list(output_sample.columns),
+        } if output_sample is not None else None
+    }
+
+
+def get_output_json_serializer() -> type:
+    """
+    Returns JSON serializer to be used in output
+
+    :return: type -- JSON serializer
+    """
     return NumpyEncoder
-
-
-if __name__ == '__main__':
-    #print(repr(columns_order()))
-    print(repr(info()))
-    init()
-    print(repr(predict_matrix(
-        [7, 0.27, 0.36, 20.7, 0.045, 45, 170, 1.001, 3, 0.45, 8.8]
-    )))
-
-    print(repr(predict({
-        'total sulfur dioxide': 170,
-        'volatile acidity': 0.27,
-        'fixed acidity': 7,
-        'citric acid': 0.36,
-        'residual sugar': 20.7,
-        'chlorides': 0.045,
-        'free sulfur dioxide': 45,
-        'density': 1.001,
-        'pH': 3,
-        'sulphates': 0.45,
-        'alcohol': 8.8
-    })))
-
-    # print(repr(predict(
-    #     {
-    #         'columns': [
-    #             'alcohol',
-    #             'chlorides',
-    #             'citric acid',
-    #             'density',
-    #             'fixed acidity',
-    #             'free sulfur dioxide',
-    #             'pH',
-    #             'residual sugar',
-    #             'sulphates',
-    #             'total sulfur dioxide',
-    #             'volatile acidity'
-    #         ],
-    #         'data': [
-    #             [8.8, 0.045, 0.36, 1.001, 7, 45, 3, 20.7, 0.45, 170, 0.27]
-    #         ]
-    #     }
-    # )))
