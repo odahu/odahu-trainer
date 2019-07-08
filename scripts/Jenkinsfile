@@ -70,7 +70,7 @@ pipeline {
                     }
 
                     print("Check code for security issues")
-                    sh "bash install-git-secrets-hook.sh install_hooks && git secrets --scan -r"
+                    sh "bash scripts/install-git-secrets-hook.sh install_hooks && git secrets --scan -r"
 
                     legion.setBuildMeta(env.updateVersionScript)
 
@@ -195,7 +195,7 @@ pipeline {
                     print ("Load legion pipeline common library")
                     legion = load "${env.sharedLibPath}"
                 }
-                legion.notifyBuild(currentBuild.currentResult)
+                //legion.notifyBuild(currentBuild.currentResult)
             }
             deleteDir()
         }
