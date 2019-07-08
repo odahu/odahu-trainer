@@ -80,6 +80,10 @@ tracking_server:
   # Type: bool
   enabled: true
 
+  # Annotations for deployment and pod
+  # Type: string->string map
+  annotations: {}
+
   # This variable can be uncommented to setup custom image name for Tracking Server
   # Type: string
   # image: custom-image:1.0

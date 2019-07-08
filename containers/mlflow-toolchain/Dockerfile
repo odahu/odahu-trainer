@@ -28,6 +28,9 @@ RUN apt-get update --fix-missing && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 
+RUN wget https://github.com/krallin/tini/releases/download/v0.18.0/tini-amd64 -qO /bin/tiny && \
+    chmod a+x /bin/tiny
+
 # Install conda
 RUN wget --quiet ${MINICONDA_URL}  -O ~/miniconda.sh && \
     /bin/bash ~/miniconda.sh -b -p /opt/conda && \

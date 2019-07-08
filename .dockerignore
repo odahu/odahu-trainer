@@ -1,0 +1,10 @@
+**
+!Makefile
+!__version__.py
+!entrypoint.py
+!README.md
+!runner.py
+!containers/**
+!scripts/**
+!helms/**
+!examples/**

@@ -14,19 +14,22 @@
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
 #
-import sys
+import argparse
+import json
+import logging
 import os
 import os.path
-import re
-import json
-import typing
-import tempfile
 import shutil
+import sys
+import typing
+from urllib import parse
+
 from pkg_resources import parse_version
 
 MLFLOW_SUBDIR = 'mlflow'
 LEGION_PROJECT_DESCRIPTION = 'legion.project.yaml'
 LEGION_MODEL_DESCRIPTION = 'legion.model.yaml'
+BASE_IMAGE = os.getenv('BASE_IMAGE', 'legion/mlflow-toolchain:latest')
 
 try:
     import mlflow
@@ -37,79 +40,75 @@ try:
     import mlflow.pyfunc
     import mlflow.store.artifact_repository_registry
 except ImportError as import_error:
-    print('Cannot import MLflow module: {}'.format(import_error))
+    print(f'Cannot import MLflow module: {import_error}')
     sys.exit(1)
 
 try:
     import yaml
 except ImportError as import_error:
-    print('Cannot import MLflow dependent module: {}'.format(import_error))
+    print(f'Cannot import yaml dependent module: {import_error}')
     sys.exit(1)
 
 
-ModelTraining = typing.NamedTuple('ModelTraining', (
-    ('name', str),
-    ('workDir', str),
-    ('entrypoint', str),
-    ('hyperparameters', typing.Dict[str, typing.Any]),
-))
-
-BASE_IMAGE = os.getenv('BASE_IMAGE', 'legion/mlflow-toolchain:latest')
+class ModelTraining(typing.NamedTuple):
+    name: str
+    work_dir: str
+    entrypoint: str
+    hyper_parameters: typing.Dict[str, typing.Any]
 
 
-def parse_model_training_entity(source_file):
+def parse_model_training_entity(source_file: str) -> ModelTraining:
     """
     Parse model training file
     """
+    logging.info(f'Parsing Model Training file: {source_file}')
+
     # Validate resource file exist
     if not os.path.exists(source_file) or not os.path.isfile(source_file):
-        print('File {} is not readable'.format(source_file))
-        return None
+        raise ValueError(f'File {source_file} is not readable')
 
-    # Load resource file
-    with open(source_file, 'r') as description_stream:
+    with open(source_file, 'r') as mt_file:
+        mt = mt_file.read()
+        logging.debug(f'Content of {source_file}:\n{mt}')
+
         try:
-            description = yaml.load(description_stream)
-        except json.JSONDecodeError as decode_error:
-            print('Cannot decode ModelTraining resource file: {}'.format(decode_error))
-            return None
+            mt = json.loads(mt)
+        except json.JSONDecodeError:
+            try:
+                mt = yaml.safe_load(mt)
+            except json.JSONDecodeError as decode_error:
+                raise ValueError(f'Cannot decode ModelTraining resource file: {decode_error}')
 
-    metadata = description.get('metadata')
+    metadata = mt.get('metadata')
     if not isinstance(metadata, dict):
-        print('Cannot find metadata field or it is not a dict')
-        return None
+        raise ValueError(f'Cannot find metadata field or it is not a dict in file {source_file}')
 
     name = metadata.get('name')
     if not isinstance(name, str):
-        print('Name should be a string: {!r}'.format(name))
-        return None
+        raise ValueError(f'Name should be a string: {name} in metadata: {metadata}')
 
-    spec = description.get('spec')
+    spec = mt.get('spec')
     if not isinstance(spec, dict):
-        print('Cannot find spec field or it is not a dict')
-        return None
+        raise ValueError(f'Cannot find spec field or it is not a dict in file {source_file}')
 
     # Prepare run arguments
-    workDir = spec.get('workDir', None)
-    if not isinstance(workDir, str):
-        print('Incorrect workDir: {!r}'.format(workDir))
-        return None
+    work_dir = spec.get('workDir')
+    if not isinstance(work_dir, str):
+        raise ValueError(f'Incorrect workDir: {work_dir} in spec: {spec}')
 
     entry_point = spec.get('entrypoint', 'main')
     if not isinstance(entry_point, str):
-        print('Entry point should be a string: {!r}'.format(entry_point))
-        return None
+        raise ValueError(f'Entry point should be a string: {entry_point} in spec: {spec}')
 
-    parameters = spec.get('hyperparameters', {})
-    if not isinstance(parameters, dict):
-        print('Invalid hyperparameters: {!r}'.format(parameters))
-        return None
+    hyper_parameters = spec.get('hyperparameters', {})
+    if not isinstance(hyper_parameters, dict):
+        raise ValueError(f'Invalid hyperparameters: {hyper_parameters} in spec: {spec}')
 
     return ModelTraining(
         name=name,
-        workDir=workDir,
+        work_dir=work_dir,
         entrypoint=entry_point,
-        hyperparameters=parameters
+        hyper_parameters=hyper_parameters,
     )
 
 
@@ -126,98 +125,53 @@ def copytree(src, dst):
             shutil.copy2(s, d)
 
 
-def main(source_file, target_directory):
-    # Parsing training resource file
-    model_training = parse_model_training_entity(source_file)  # type: typing.Optional[ModelTraining]
-    if not model_training:
-        print('Cannot parse input information')
-        return False
-
-    # Preparing target directory
-    if not os.path.exists(target_directory):
-        os.makedirs(target_directory)
-
-    # Validating MLFlow version
-    mlflow_version = parse_version(mlflow.__version__)
-    if mlflow_version < parse_version('1.0') or mlflow_version > parse_version('1.0'):
-        print('Unsupported version {}. Please use MLFlow version 1.0.*'.format(mlflow_version))
-        return False
-
-    # Getting of tracking URI
-    tracking_uri = mlflow.tracking.utils.get_tracking_uri()
-    if not tracking_uri:
-        print('Can not get tracking URL')
-        return False
-
-    # Creating MLFlow client, setting tracking URI
-    print("=== Using MLFlow client placed at {!r} ===".format(tracking_uri))
-    mlflow.tracking.utils.set_tracking_uri(tracking_uri)
-    client = mlflow.tracking.MlflowClient(tracking_uri=tracking_uri)
-
-    # Registering of experiment on tracking server if it is not exist
-    print("=== Searching for experiment with name {!r} ===".format(model_training.name))
-    experiment = client.get_experiment_by_name(model_training.name)
-
-    if experiment:
-        experiment_id = experiment.experiment_id
-        print("=== Experiment {!r} has been found ===".format(experiment_id))
-    else:
-        print("=== Creating new experiment with name {!r} ===".format(model_training.name))
-        experiment_id = client.create_experiment(model_training.name)
-        print("=== Experiment {!r} has been created ===".format(experiment_id))
-        experiment = client.get_experiment_by_name(model_training.name)
-
-    # Starting run and awaiting of finish of run
-    print("=== Starting MLFlow's run function ===")
-    print("Project directory: {!r}".format(model_training.workDir))
-    print("Entry point: {!r}".format(model_training.entrypoint))
-    print("Parameters: {!r}".format(model_training.hyperparameters))
-    print("Experiment ID: {!r}".format(experiment_id))
-    run = mlflow.projects.run(
-        uri=model_training.workDir,
-        entry_point=model_training.entrypoint,
-        parameters=model_training.hyperparameters,
-        experiment_id=experiment_id,
-        backend='local',
-        synchronous=True
-    )
-    print("=== MLflow's run function finished ===")
-    print("Run ID: {!r}".format(run.run_id))
-
+def save_models(mlflow_run: mlflow.projects.SubmittedRun, target_directory: str) -> None:
     # Using internal API for getting store and artifacts location
     store = mlflow.tracking._get_store()
-    artifact_uri = store.get_run(run.run_id).info.artifact_uri
-    print("=== Using store {!r} ===".format(store))
-    print("=== Artifacts location detected ===")
-    print(artifact_uri)
+    artifact_uri = store.get_run(mlflow_run.run_id).info.artifact_uri
+    logging.info(f"Artifacts location detected. Using store {store}")
 
-    print("=== Analyzing directory {!r} for models ===".format(artifact_uri))
+    parsed_url = parse.urlparse(artifact_uri)
+    if parsed_url.scheme and parsed_url.scheme != 'file':
+        raise ValueError(f'Unsupported scheme of url: {parsed_url}')
+
+    artifact_uri = parsed_url.path
+    logging.info(f"Analyzing directory {artifact_uri} for models")
     models = []
     for subpath in os.listdir(artifact_uri):
         full_subpath = os.path.join(artifact_uri, subpath)
         ml_model_location = os.path.join(full_subpath, 'MLmodel')
+
         if os.path.isdir(full_subpath) and os.path.exists(ml_model_location):
-            print("=== Analyzing {} ({!r}) ===".format(subpath, full_subpath))
+            logging.debug(f"Analyzing {subpath} in {full_subpath}")
+
             try:
                 model = mlflow.models.Model.load(full_subpath)
+
+                flavors = model.flavors.keys()
+                logging.debug(f"{subpath} contains {flavors} flavours")
+                if mlflow.pyfunc.FLAVOR_NAME not in flavors:
+                    logging.debug(f"{flavors} does not has {mlflow.pyfunc.FLAVOR_NAME} flavor, skipping")
+                    continue
+
+                logging.info(f"Registering model {subpath}")
+                models.append(subpath)
             except Exception as load_exception:
-                print("=== {!r} is not a MLFlow model: {} ===".format(full_subpath, load_exception))
-            flavors = model.flavors.keys()
-            print("=== {} contains {} flavours ===".format(subpath, tuple(flavors)))
-            if mlflow.pyfunc.FLAVOR_NAME not in flavors:
-                print("=== {} does not has {} flavor, skipping ===".format(mlflow.pyfunc.FLAVOR_NAME))
-                continue
-            print("=== Registering model {} ===".format(subpath))
-            models.append(subpath)
+                logging.debug(f"{full_subpath} is not a MLFlow model: {load_exception}")
 
     mlflow_target_directory = os.path.join(target_directory, MLFLOW_SUBDIR)
-    print("=== Copying MLFlow models from {!r} to {!r} ===".format(artifact_uri, mlflow_target_directory))
+
+    logging.info(f"Copying MLFlow models from {artifact_uri} to {mlflow_target_directory}")
+
+    logging.info('Preparing target directory')
     if not os.path.exists(mlflow_target_directory):
         os.makedirs(mlflow_target_directory)
+
     copytree(artifact_uri, mlflow_target_directory)
 
     mlflow_models_list = os.path.join(target_directory, LEGION_PROJECT_DESCRIPTION)
-    print("=== Dumping MLFlow models list to {!r} ===".format(mlflow_models_list))
+    logging.info(f"Dumping MLFlow models list to {mlflow_models_list}")
+
     with open(mlflow_models_list, 'w') as proj_stream:
         yaml.dump({
             'models': [{
@@ -228,11 +182,11 @@ def main(source_file, target_directory):
 
     for model in models:
         location = os.path.join(mlflow_target_directory, model)
-        print("=== Processing model {!r} in location {!r} ===".format(model, location))
+        logging.debug(f"Processing model {model} in location {location}")
+
         model = mlflow.models.Model.load(location)
         py_flavor = model.flavors[mlflow.pyfunc.FLAVOR_NAME]
-        dependencies = None
-        conda_path = None
+
         env = py_flavor.get('env')
         if env:
             dependencies = 'conda'
@@ -256,16 +210,95 @@ def main(source_file, target_directory):
         with open(os.path.join(location, LEGION_MODEL_DESCRIPTION), 'w') as model_descr_stream:
             yaml.dump(data, model_descr_stream)
 
-    return True
+
+def train_models(model_training: ModelTraining) -> mlflow.projects.SubmittedRun:
+    logging.debug('Validating MLFlow version')
+    mlflow_version = parse_version(mlflow.__version__)
+    if mlflow_version < parse_version('1.0') or mlflow_version > parse_version('1.0'):
+        raise Exception(f'Unsupported version {mlflow_version}. Please use MLFlow version 1.0.*')
+
+    logging.info('Getting of tracking URI')
+    tracking_uri = mlflow.tracking.utils.get_tracking_uri()
+    if not tracking_uri:
+        raise ValueError('Can not get tracking URL')
+    logging.info(f"Using MLFlow client placed at {tracking_uri}")
+
+    logging.info('Creating MLFlow client, setting tracking URI')
+    mlflow.tracking.utils.set_tracking_uri(tracking_uri)
+    client = mlflow.tracking.MlflowClient(tracking_uri=tracking_uri)
+
+    # Registering of experiment on tracking server if it is not exist
+    logging.info(f"Searching for experiment with name {model_training.name}")
+    experiment = client.get_experiment_by_name(model_training.name)
+
+    if experiment:
+        experiment_id = experiment.experiment_id
+        logging.info(f"Experiment {experiment_id} has been found")
+    else:
+        logging.info(f"Creating new experiment with name {model_training.name}")
+        experiment_id = client.create_experiment(model_training.name)
+
+        logging.info(f"Experiment {experiment_id} has been created")
+        client.get_experiment_by_name(model_training.name)
+
+    # Starting run and awaiting of finish of run
+    logging.info(f"Starting MLFlow's run function. Parameters: [project directory: {model_training.work_dir}, "
+                 f"entry point: {model_training.entrypoint}, hyper parameters: {model_training.hyper_parameters},"
+                 f"experiment id={experiment_id}]")
+    run = mlflow.projects.run(
+        uri=model_training.work_dir,
+        entry_point=model_training.entrypoint,
+        parameters=model_training.hyper_parameters,
+        experiment_id=experiment_id,
+        backend='local',
+        synchronous=True
+    )
+
+    logging.info(f"MLflow's run function finished. Run ID: {run.run_id}")
+
+    return run
+
+
+def update_pid_file(pid_file: str, value: int) -> None:
+    with open(pid_file, 'w+') as f:
+        f.write(str(value))
+
+
+def setup_logging(args: argparse.Namespace) -> None:
+    log_level = logging.DEBUG if args.verbose else logging.INFO
+
+    logging.basicConfig(format='[legion][%(levelname)5s] %(asctime)s - %(message)s', datefmt='%d-%b-%y %H:%M:%S',
+                        level=log_level)
 
 
 if __name__ == '__main__':
-    if len(sys.argv) != 3:
-        print('This script should be run with two arguments - path to ModelTraining resource and path to save final resources to',
-              file=sys.stderr)
-        sys.exit(1)
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--verbose", action='store_true', help="more extensive logging")
+    parser.add_argument("--mt-file", '--mt', type=str, required=True,
+                        help="json/yaml file with a mode training resource")
+    parser.add_argument("--target", type=str, default='mlflow_output',
+                        help="directory where result model will be saved")
+    parser.add_argument("--pid-file", type=str, default="mlflow.pid",
+                        help="Path of pid file")
+    args = parser.parse_args()
 
-    if not main(sys.argv[1], sys.argv[2]):
-        print('Failed to start run. Interrupting', file=sys.stderr)
+    setup_logging(args)
+
+    try:
+        update_pid_file(args.pid_file, os.getpid())
+
+        model_training = parse_model_training_entity(args.mt_file)
+        mlflow_run = train_models(model_training)
+
+        save_models(mlflow_run, args.target)
+        update_pid_file(args.pid_file, 0)
+    except Exception as e:
+        error_message = f'Exception occurs during model training. Message: {e}'
+
+        if args.verbose:
+            logging.exception(error_message)
+        else:
+            logging.error(error_message)
+
+        update_pid_file(args.pid_file, -1)
         sys.exit(2)
-

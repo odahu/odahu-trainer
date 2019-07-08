@@ -71,7 +71,7 @@ def get_base_version(file):
             raise Exception('Can\'t get version from version string')
 
     if not base_version:
-        raise Exception(f'Emptry search results for pattern {SEARCH_PATTERN!r} in {content!r}')
+        raise Exception('Empty search results for pattern {!r} in {!r}'.format(SEARCH_PATTERN, content))
 
     return base_version.group(1)
 
@@ -89,7 +89,7 @@ def patch_helm_charts(charts_directory, build_version):
             with open(chart_file, 'r') as chart_read_stream:
                 chart_data = chart_read_stream.read()
 
-            chart_new_data = CHART_APP_VERSION.sub(f'appVersion: {build_version}', chart_data)
+            chart_new_data = CHART_APP_VERSION.sub('appVersion: {}'.format(build_version), chart_data)
 
             with open(chart_file, 'w') as chart_write_stream:
                 chart_write_stream.write(chart_new_data)
