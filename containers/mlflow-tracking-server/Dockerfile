@@ -17,7 +17,7 @@
 FROM python:3.7.0
 
 ARG MLFLOW_VERSION=1.0.0
-ARG MLFLOW_RUNS_DIRECTORY=/mlruns
+ENV MLFLOW_RUNS_DIRECTORY=/mlruns
 
 RUN pip install --no-cache-dir mlflow==${MLFLOW_VERSION}
 
@@ -25,8 +25,6 @@ RUN mkdir -p ${MLFLOW_RUNS_DIRECTORY}
 
 EXPOSE 5000
 
-CMD mlflow server \
-    --backend-store-uri ${MLFLOW_RUNS_DIRECTORY} \
-    --host 0.0.0.0 \
-    -p 5000
+ENTRYPOINT ["bash", "-c"]
+CMD ["mlflow server --backend-store-uri ${MLFLOW_RUNS_DIRECTORY} --host 0.0.0.0 -p 5000"]
 

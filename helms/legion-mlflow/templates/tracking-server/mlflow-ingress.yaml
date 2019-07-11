@@ -5,24 +5,24 @@ apiVersion: extensions/v1beta1
 kind: Ingress
 metadata:
   annotations:
-  {{- include "legion.ingress-aggregated-annotations" (dict "local" .Values.mlflow.ingress "root" .) | nindent 4 }}
+  {{- include "legion.ingress-aggregated-annotations" (dict "local" .Values.tracking_server.ingress "root" .) | nindent 4 }}
   labels:
     component: "legion-mlflow-tracking-server"
     {{- include "legion.helm-labels" . | nindent 4 }}
   name: "{{ .Release.Name }}-mlflow-tracking-server"
 spec:
   rules:
-    - host: {{ include "legion.ingress-domain-name" (dict "local" .Values.mlflow.ingress "root" . "tpl" "mlflow-tracking-server-%s.%s") }}
+    - host: {{ include "legion.ingress-domain-name" (dict "local" .Values.tracking_server.ingress "root" . "tpl" "mlflow-tracking-server-%s.%s") }}
       http:
         paths:
           - backend:
               serviceName: "{{ .Release.Name }}-legion-mlflow-tracking-server"
-              servicePort: {{ .Values.port }}
+              servicePort: {{ .Values.tracking_server.port }}
   {{- if (ternary $.Values.tracking_server.ingress.tlsEnabled $.Values.ingress.tlsEnabled (hasKey $.Values.tracking_server.ingress "tlsEnabled")) }}
   tls:
   - hosts:
-    - {{ include "legion.ingress-domain-name" (dict "local" .Values.mlflow.ingress "root" . "tpl" "mlflow-tracking-server-%s.%s") | quote }}
-    secretName: {{ include "legion.ingress-tls-secret-name" (dict "local" .Values.mlflow.ingress "root" . ) | quote }}
+    - {{ include "legion.ingress-domain-name" (dict "local" .Values.tracking_server.ingress "root" . "tpl" "mlflow-tracking-server-%s.%s") | quote }}
+    secretName: {{ include "legion.ingress-tls-secret-name" (dict "local" .Values.tracking_server.ingress "root" . ) | quote }}
   {{- end }}
 {{- end }}
 {{- end }}

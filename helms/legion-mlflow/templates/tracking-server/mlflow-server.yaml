@@ -3,6 +3,10 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: "{{ .Release.Name }}-legion-mlflow-tracking-server"
+{{- if .Values.tracking_server.annotations }}
+  annotations:
+    {{ toYaml .Values.tracking_server.annotations | nindent 4 }}
+{{- end }}
   labels:
     component: "legion-mlflow-tracking-server"
     {{- include "legion.helm-labels" . | nindent 4 }}
@@ -17,6 +21,10 @@ spec:
       labels:
         component: "legion-mlflow-tracking-server"
         {{- include "legion.helm-labels" . | nindent 8 }}
+      {{- if .Values.tracking_server.annotations }}
+      annotations:
+        {{ toYaml .Values.tracking_server.annotations | nindent 8 }}
+      {{- end }}
     spec:
       containers:
       - name: mlflow
