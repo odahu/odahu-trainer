@@ -26,10 +26,10 @@ from urllib import parse
 
 from pkg_resources import parse_version
 
-MLFLOW_SUBDIR = 'mlflow'
+MODEL_SUBFOLDER = 'legion_model'
 LEGION_PROJECT_DESCRIPTION = 'legion.project.yaml'
-LEGION_MODEL_DESCRIPTION = 'legion.model.yaml'
 BASE_IMAGE = os.getenv('BASE_IMAGE', 'legion/mlflow-toolchain:latest')
+ENTRYPOINT = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'entrypoint.py')
 
 try:
     import mlflow
@@ -167,46 +167,49 @@ def save_models(mlflow_run: mlflow.projects.SubmittedRun, target_directory: str)
             except Exception as load_exception:
                 logging.debug(f"{full_subpath} is not a MLflow model: {load_exception}")
 
-    mlflow_target_directory = os.path.join(target_directory, MLFLOW_SUBDIR)
+    if len(models) > 1:
+        raise Exception(f'Founded models: {models!r}. Only 1 model allowed')
 
-    logging.info(f"Copying MLflow models from {artifact_uri} to {mlflow_target_directory}")
+    if not models:
+        raise Exception(f'Can not find any model')
+
+    model = models[0]
+    model_source_folder = os.path.join(artifact_uri, model)
+    mlflow_target_directory = os.path.join(target_directory, MODEL_SUBFOLDER)
+
+    logging.info(f"Copying MLflow model from {model_source_folder} to {mlflow_target_directory}")
 
     logging.info('Preparing target directory')
     if not os.path.exists(mlflow_target_directory):
         os.makedirs(mlflow_target_directory)
 
-    copytree(artifact_uri, mlflow_target_directory)
+    copytree(model_source_folder, mlflow_target_directory)
 
-    mlflow_models_list = os.path.join(target_directory, LEGION_PROJECT_DESCRIPTION)
-    logging.info(f"Dumping MLflow models list to {mlflow_models_list}")
+    model_obj = mlflow.models.Model.load(mlflow_target_directory)
+    py_flavor = model_obj.flavors[mlflow.pyfunc.FLAVOR_NAME]
 
-    with open(mlflow_models_list, 'w') as proj_stream:
-        yaml.dump({
-            'models': [{
-                'name': model,
-                'location': os.path.join(MLFLOW_SUBDIR, model)
-            } for model in models]
-        }, proj_stream)
+    env = py_flavor.get('env')
+    if env:
+        dependencies = 'conda'
+        conda_path = os.path.join(MODEL_SUBFOLDER, env)
+        logging.info(f'Conda env located in {conda_path}')
+    else:
+        raise Exception('Unknown type of env - empty')
 
-    for model in models:
-        location = os.path.join(mlflow_target_directory, model)
-        logging.debug(f"Processing model {model} in location {location}")
+    entrypoint_target = os.path.join(mlflow_target_directory, 'entrypoint.py')
+    shutil.copyfile(ENTRYPOINT, entrypoint_target)
 
-        model = mlflow.models.Model.load(location)
-        py_flavor = model.flavors[mlflow.pyfunc.FLAVOR_NAME]
-
-        env = py_flavor.get('env')
-        if env:
-            dependencies = 'conda'
-            conda_path = env
-        else:
-            raise Exception('Unknown type of env - empty')
-
+    project_file_path = os.path.join(target_directory, LEGION_PROJECT_DESCRIPTION)
+    with open(project_file_path, 'w') as proj_stream:
         data = {
             'binaries': {
                 'type': 'python',
                 'dependencies': dependencies,
                 'conda_path': conda_path
+            },
+            'model': {
+                'workDir': MODEL_SUBFOLDER,
+                'entrypoint': 'entrypoint'
             },
             'toolchain': {
                 'name': 'mlflow',
@@ -215,8 +218,7 @@ def save_models(mlflow_run: mlflow.projects.SubmittedRun, target_directory: str)
             'legionVersion': '1.0'
         }
 
-        with open(os.path.join(location, LEGION_MODEL_DESCRIPTION), 'w') as model_descr_stream:
-            yaml.dump(data, model_descr_stream)
+        yaml.dump(data, proj_stream)
 
 
 def train_models(model_training: ModelTraining) -> mlflow.projects.SubmittedRun:
