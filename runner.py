@@ -51,6 +51,10 @@ except ImportError as import_error:
 
 
 class ModelTraining(typing.NamedTuple):
+    """
+    Declaration of model training entity
+    """
+
     name: str
     work_dir: str
     entrypoint: str
@@ -126,6 +130,9 @@ def copytree(src, dst):
 
 
 def save_models(mlflow_run: mlflow.projects.SubmittedRun, target_directory: str) -> None:
+    """
+    Save models after run
+    """
     # Using internal API for getting store and artifacts location
     store = mlflow.tracking._get_store()
     artifact_uri = store.get_run(mlflow_run.run_id).info.artifact_uri
@@ -136,6 +143,7 @@ def save_models(mlflow_run: mlflow.projects.SubmittedRun, target_directory: str)
         raise ValueError(f'Unsupported scheme of url: {parsed_url}')
 
     artifact_uri = parsed_url.path
+
     logging.info(f"Analyzing directory {artifact_uri} for models")
     models = []
     for subpath in os.listdir(artifact_uri):
@@ -157,11 +165,11 @@ def save_models(mlflow_run: mlflow.projects.SubmittedRun, target_directory: str)
                 logging.info(f"Registering model {subpath}")
                 models.append(subpath)
             except Exception as load_exception:
-                logging.debug(f"{full_subpath} is not a MLFlow model: {load_exception}")
+                logging.debug(f"{full_subpath} is not a MLflow model: {load_exception}")
 
     mlflow_target_directory = os.path.join(target_directory, MLFLOW_SUBDIR)
 
-    logging.info(f"Copying MLFlow models from {artifact_uri} to {mlflow_target_directory}")
+    logging.info(f"Copying MLflow models from {artifact_uri} to {mlflow_target_directory}")
 
     logging.info('Preparing target directory')
     if not os.path.exists(mlflow_target_directory):
@@ -170,7 +178,7 @@ def save_models(mlflow_run: mlflow.projects.SubmittedRun, target_directory: str)
     copytree(artifact_uri, mlflow_target_directory)
 
     mlflow_models_list = os.path.join(target_directory, LEGION_PROJECT_DESCRIPTION)
-    logging.info(f"Dumping MLFlow models list to {mlflow_models_list}")
+    logging.info(f"Dumping MLflow models list to {mlflow_models_list}")
 
     with open(mlflow_models_list, 'w') as proj_stream:
         yaml.dump({
@@ -212,18 +220,21 @@ def save_models(mlflow_run: mlflow.projects.SubmittedRun, target_directory: str)
 
 
 def train_models(model_training: ModelTraining) -> mlflow.projects.SubmittedRun:
-    logging.debug('Validating MLFlow version')
+    """
+    Start MLfLow run
+    """
+    logging.debug('Validating MLflow version')
     mlflow_version = parse_version(mlflow.__version__)
     if mlflow_version < parse_version('1.0') or mlflow_version > parse_version('1.0'):
-        raise Exception(f'Unsupported version {mlflow_version}. Please use MLFlow version 1.0.*')
+        raise Exception(f'Unsupported version {mlflow_version}. Please use MLflow version 1.0.*')
 
     logging.info('Getting of tracking URI')
     tracking_uri = mlflow.tracking.utils.get_tracking_uri()
     if not tracking_uri:
         raise ValueError('Can not get tracking URL')
-    logging.info(f"Using MLFlow client placed at {tracking_uri}")
+    logging.info(f"Using MLflow client placed at {tracking_uri}")
 
-    logging.info('Creating MLFlow client, setting tracking URI')
+    logging.info('Creating MLflow client, setting tracking URI')
     mlflow.tracking.utils.set_tracking_uri(tracking_uri)
     client = mlflow.tracking.MlflowClient(tracking_uri=tracking_uri)
 
@@ -242,7 +253,7 @@ def train_models(model_training: ModelTraining) -> mlflow.projects.SubmittedRun:
         client.get_experiment_by_name(model_training.name)
 
     # Starting run and awaiting of finish of run
-    logging.info(f"Starting MLFlow's run function. Parameters: [project directory: {model_training.work_dir}, "
+    logging.info(f"Starting MLflow's run function. Parameters: [project directory: {model_training.work_dir}, "
                  f"entry point: {model_training.entrypoint}, hyper parameters: {model_training.hyper_parameters},"
                  f"experiment id={experiment_id}]")
     run = mlflow.projects.run(
@@ -260,11 +271,17 @@ def train_models(model_training: ModelTraining) -> mlflow.projects.SubmittedRun:
 
 
 def update_pid_file(pid_file: str, value: int) -> None:
+    """
+    Update PID file (save value to PID file)
+    """
     with open(pid_file, 'w+') as f:
         f.write(str(value))
 
 
 def setup_logging(args: argparse.Namespace) -> None:
+    """
+    Setup logging instance
+    """
     log_level = logging.DEBUG if args.verbose else logging.INFO
 
     logging.basicConfig(format='[legion][%(levelname)5s] %(asctime)s - %(message)s', datefmt='%d-%b-%y %H:%M:%S',
@@ -282,15 +299,21 @@ if __name__ == '__main__':
                         help="Path of pid file")
     args = parser.parse_args()
 
+    # Setup logging
     setup_logging(args)
 
     try:
+        # Set PID of current process
         update_pid_file(args.pid_file, os.getpid())
 
+        # Parse ModelTraining entity
         model_training = parse_model_training_entity(args.mt_file)
+        # Start MLflow training process
         mlflow_run = train_models(model_training)
-
+        # Save MLflow models as Legion artifact
         save_models(mlflow_run, args.target)
+
+        # Save 0 as PID if file in success
         update_pid_file(args.pid_file, 0)
     except Exception as e:
         error_message = f'Exception occurs during model training. Message: {e}'
@@ -300,5 +323,6 @@ if __name__ == '__main__':
         else:
             logging.error(error_message)
 
+        # Save -1 as PID in file if error
         update_pid_file(args.pid_file, -1)
         sys.exit(2)

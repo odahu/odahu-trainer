@@ -71,7 +71,9 @@ if __name__ == "__main__":
         mlflow.set_tag("test", '13')
 
         mlflow.sklearn.log_model(lr, "model")
-        mlflow.sklearn.log_model(lr, "model2")
 
-        train_x.head().to_pickle("head.pkl")
-        mlflow.log_artifact('head.pkl', 'model')
+        # Persist samples (input and output)
+        train_x.head().to_pickle('head_input.pkl')
+        mlflow.log_artifact('head_input.pkl', 'model')
+        train_y.head().to_pickle('head_output.pkl')
+        mlflow.log_artifact('head_output.pkl', 'model')
