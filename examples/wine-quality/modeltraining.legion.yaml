@@ -1,13 +1,14 @@
 apiVersion: legion.legion-platform.org/v1alpha1
 kind: ModelTraining
 metadata:
-  name: wine-quality
+  annotation:
+    name: wine-quality
+    version: "1.0"
+  name: wine-quality-training
 spec:
   toolchain: legion-mlflow
   vcsName: legion
   workDir: examples/wine-quality
   entrypoint: main
-  modelFile: model
-  experiment: exp1  # name of experiment
   hyperparameters:
     alpha: 1.0

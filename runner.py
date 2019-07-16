@@ -92,9 +92,9 @@ def parse_model_training_entity(source_file: str) -> ModelTraining:
     if not isinstance(metadata, dict):
         raise ValueError(f'Field metadata.annotations has wrong format in file {source_file}')
 
-    name = metadata.get('name')
+    name = annotations.get('name', metadata.get('name'))
     if not isinstance(name, str):
-        raise ValueError(f'Name should be a string: {name} in metadata: {metadata}')
+        raise ValueError(f'Name should be a string: {name} in metadata: {metadata} or annotation')
 
     version = annotations.get('version', '0.0')
     if not isinstance(version, str):
