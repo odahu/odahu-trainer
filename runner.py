@@ -218,7 +218,7 @@ def save_models(mlflow_run: mlflow.projects.SubmittedRun, model_training: ModelT
                 'conda_path': conda_path
             },
             'model': {
-                'id': model_training.name,
+                'name': model_training.name,
                 'version': model_training.version,
                 'workDir': MODEL_SUBFOLDER,
                 'entrypoint': 'entrypoint'
