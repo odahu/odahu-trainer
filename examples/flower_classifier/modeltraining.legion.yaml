@@ -1,11 +1,10 @@
 apiVersion: legion.legion-platform.org/v1alpha1
 kind: ModelTraining
 metadata:
-  annotation:
-    name: flower-classifier
-    version: "1.0"
   name: flower-classifier-training
 spec:
+  name: flower-classifier
+  version: "1.0"
   toolchain: legion-mlflow
   vcsName: legion
   workDir: examples/flower_classifier

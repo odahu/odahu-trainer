@@ -84,25 +84,17 @@ def parse_model_training_entity(source_file: str) -> ModelTraining:
             except json.JSONDecodeError as decode_error:
                 raise ValueError(f'Cannot decode ModelTraining resource file: {decode_error}')
 
-    metadata = mt.get('metadata')
-    if not isinstance(metadata, dict):
-        raise ValueError(f'Cannot find metadata field or it is not a dict in file {source_file}')
-
-    annotations = mt.get('annotations', {})
-    if not isinstance(metadata, dict):
-        raise ValueError(f'Field metadata.annotations has wrong format in file {source_file}')
-
-    name = annotations.get('name', metadata.get('name'))
-    if not isinstance(name, str):
-        raise ValueError(f'Name should be a string: {name} in metadata: {metadata} or annotation')
-
-    version = annotations.get('version', '0.0')
-    if not isinstance(version, str):
-        raise ValueError(f'Version should be a string')
-
     spec = mt.get('spec')
     if not isinstance(spec, dict):
         raise ValueError(f'Cannot find spec field or it is not a dict in file {source_file}')
+
+    name = spec.get('name')
+    if not isinstance(name, str):
+        raise ValueError(f'Name should be a string: {name!r} in spec: {spec}')
+
+    version = spec.get('version')
+    if not isinstance(version, str):
+        raise ValueError(f'Version should be a string: {version!r} in spec: {spec}')
 
     # Prepare run arguments
     work_dir = spec.get('workDir')

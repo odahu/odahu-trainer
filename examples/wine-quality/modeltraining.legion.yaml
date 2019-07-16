@@ -1,11 +1,10 @@
 apiVersion: legion.legion-platform.org/v1alpha1
 kind: ModelTraining
 metadata:
-  annotation:
-    name: wine-quality
-    version: "1.0"
   name: wine-quality-training
 spec:
+  name: wine-quality
+  version: "1.0"
   toolchain: legion-mlflow
   vcsName: legion
   workDir: examples/wine-quality
