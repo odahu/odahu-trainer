@@ -56,6 +56,7 @@ class ModelTraining(typing.NamedTuple):
     """
 
     name: str
+    version: str
     work_dir: str
     entrypoint: str
     hyper_parameters: typing.Dict[str, typing.Any]
@@ -87,9 +88,17 @@ def parse_model_training_entity(source_file: str) -> ModelTraining:
     if not isinstance(metadata, dict):
         raise ValueError(f'Cannot find metadata field or it is not a dict in file {source_file}')
 
+    annotations = mt.get('annotations', {})
+    if not isinstance(metadata, dict):
+        raise ValueError(f'Field metadata.annotations has wrong format in file {source_file}')
+
     name = metadata.get('name')
     if not isinstance(name, str):
         raise ValueError(f'Name should be a string: {name} in metadata: {metadata}')
+
+    version = annotations.get('version', '0.0')
+    if not isinstance(version, str):
+        raise ValueError(f'Version should be a string')
 
     spec = mt.get('spec')
     if not isinstance(spec, dict):
@@ -110,6 +119,7 @@ def parse_model_training_entity(source_file: str) -> ModelTraining:
 
     return ModelTraining(
         name=name,
+        version=version,
         work_dir=work_dir,
         entrypoint=entry_point,
         hyper_parameters=hyper_parameters,
@@ -129,7 +139,7 @@ def copytree(src, dst):
             shutil.copy2(s, d)
 
 
-def save_models(mlflow_run: mlflow.projects.SubmittedRun, target_directory: str) -> None:
+def save_models(mlflow_run: mlflow.projects.SubmittedRun, model_training: ModelTraining, target_directory: str) -> None:
     """
     Save models after run
     """
@@ -208,6 +218,8 @@ def save_models(mlflow_run: mlflow.projects.SubmittedRun, target_directory: str)
                 'conda_path': conda_path
             },
             'model': {
+                'id': model_training.name,
+                'version': model_training.version,
                 'workDir': MODEL_SUBFOLDER,
                 'entrypoint': 'entrypoint'
             },
@@ -310,10 +322,12 @@ if __name__ == '__main__':
 
         # Parse ModelTraining entity
         model_training = parse_model_training_entity(args.mt_file)
+
         # Start MLflow training process
         mlflow_run = train_models(model_training)
+
         # Save MLflow models as Legion artifact
-        save_models(mlflow_run, args.target)
+        save_models(mlflow_run, model_training, args.target)
 
         # Save 0 as PID if file in success
         update_pid_file(args.pid_file, 0)
