@@ -1,15 +1,59 @@
 {{- if .Values.toolchain_integration.enabled -}}
-apiVersion: legion.legion-platform.org/v1alpha1
-kind: ToolchainIntegration
+kind: ConfigMap
+apiVersion: v1
 metadata:
+  name: "{{ .Release.Name }}-mlflow-resources"
   labels:
-    controller-tools.k8s.io: "1.0"
     {{- include "legion.helm-labels" . | nindent 4 }}
-  name: mlflow-integration
+data:
+  resources.yaml: |
+    kind: ToolchainIntegration
+    id: mlflow
+    spec:
+      additionalEnvironments:
+        MLFLOW_TRACKING_URI: http://mlflow.{{ .Release.Namespace }}.svc.cluster.local
+      defaultImage: "{{ include "legion.image-name" (dict "root" . "service" .Values.tracking_server "tpl" "%slegion-mlflow-toolchain:%s") }}"
+      entrypoint: /opt/conda/bin/legion-mlflow-runner
+    ---
+    kind: ToolchainIntegration
+    id: mlflow-gpu
+    spec:
+      additionalEnvironments:
+        MLFLOW_TRACKING_URI: http://mlflow.{{ .Release.Namespace }}.svc.cluster.local
+      defaultImage: "{{ include "legion.image-name" (dict "root" . "service" .Values.tracking_server "tpl" "%slegion-mlflow-toolchain-gpu:%s") }}"
+      entrypoint: /opt/conda/bin/legion-mlflow-runner
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: "{{ .Release.Name }}-mlflow-resources-uploader"
+  labels:
+    component: "mlflow-resources-uploader"
+    {{- include "legion.helm-labels" . | nindent 4 }}
+  annotations:
+    "helm.sh/hook": post-install,post-upgrade
+    "helm.sh/hook-weight": "-5"
+    "helm.sh/hook-delete-policy": before-hook-creation
 spec:
-  entrypoint: "/legion-cmd/runner.py"
-  defaultImage: "{{ include "legion.image-name" (dict "root" . "service" .Values.tracking_server "tpl" "%slegion-mlflow-toolchain:%s") }}"
-  additionalEnvirnoment:
-  - name: MLFLOW_TRACKING_URI
-    value: "http://{{ .Release.Name }}-legion-mlflow-tracking-server:{{ .Values.tracking_server.port }}"
+  template:
+    spec:
+      restartPolicy: Never
+      volumes:
+        - name: resources
+          configMap:
+            name: "{{ .Release.Name }}-mlflow-resources"
+      containers:
+      - name: mlflow-resources-uploader
+        env:
+          - name: EDI_URL
+            value: {{ .Values.ediUrl }}
+        image: "{{ include "legion.image-name" (dict "root" . "service" .Values.tracking_server "tpl" "%sresource-applier:%s") }}"
+        volumeMounts:
+          - mountPath: /opt/legion
+            name: resources
+        command:
+          - legionctl
+          - bulk
+          - apply
+          - /opt/legion/resources.yaml
 {{- end }}

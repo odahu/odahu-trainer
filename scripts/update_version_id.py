@@ -18,7 +18,6 @@
 Tool for updating version files
 """
 import argparse
-import datetime
 import os
 import re
 import subprocess
@@ -139,7 +138,7 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     try:
-        build_version = work(args, os.path.abspath('__version__.py'))
+        build_version = work(args, os.path.abspath('mlflowrunner/__version__.py'))
         patch_helm_charts('helms', build_version)
         print(build_version)
     except KeyboardInterrupt:

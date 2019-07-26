@@ -21,48 +21,26 @@ import os
 import os.path
 import shutil
 import sys
-import typing
 from urllib import parse
 
+import mlflow
+import mlflow.models
+import mlflow.projects
+import mlflow.pyfunc
+import mlflow.store.artifact_repository_registry
+import mlflow.tracking
+import mlflow.tracking.utils
+import yaml
+from legion.sdk.models import K8sTrainer
+from legion.sdk.models import ModelTraining
 from pkg_resources import parse_version
 
 MODEL_SUBFOLDER = 'legion_model'
 LEGION_PROJECT_DESCRIPTION = 'legion.project.yaml'
-BASE_IMAGE = os.getenv('BASE_IMAGE', 'legion/mlflow-toolchain:latest')
 ENTRYPOINT = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'entrypoint.py')
 
-try:
-    import mlflow
-    import mlflow.tracking
-    import mlflow.tracking.utils
-    import mlflow.projects
-    import mlflow.models
-    import mlflow.pyfunc
-    import mlflow.store.artifact_repository_registry
-except ImportError as import_error:
-    print(f'Cannot import MLflow module: {import_error}')
-    sys.exit(1)
 
-try:
-    import yaml
-except ImportError as import_error:
-    print(f'Cannot import yaml dependent module: {import_error}')
-    sys.exit(1)
-
-
-class ModelTraining(typing.NamedTuple):
-    """
-    Declaration of model training entity
-    """
-
-    name: str
-    version: str
-    work_dir: str
-    entrypoint: str
-    hyper_parameters: typing.Dict[str, typing.Any]
-
-
-def parse_model_training_entity(source_file: str) -> ModelTraining:
+def parse_model_training_entity(source_file: str) -> K8sTrainer:
     """
     Parse model training file
     """
@@ -84,38 +62,7 @@ def parse_model_training_entity(source_file: str) -> ModelTraining:
             except json.JSONDecodeError as decode_error:
                 raise ValueError(f'Cannot decode ModelTraining resource file: {decode_error}')
 
-    spec = mt.get('spec')
-    if not isinstance(spec, dict):
-        raise ValueError(f'Cannot find spec field or it is not a dict in file {source_file}')
-
-    name = spec.get('name')
-    if not isinstance(name, str):
-        raise ValueError(f'Name should be a string: {name!r} in spec: {spec}')
-
-    version = spec.get('version')
-    if not isinstance(version, str):
-        raise ValueError(f'Version should be a string: {version!r} in spec: {spec}')
-
-    # Prepare run arguments
-    work_dir = spec.get('workDir')
-    if not isinstance(work_dir, str):
-        raise ValueError(f'Incorrect workDir: {work_dir} in spec: {spec}')
-
-    entry_point = spec.get('entrypoint', 'main')
-    if not isinstance(entry_point, str):
-        raise ValueError(f'Entry point should be a string: {entry_point} in spec: {spec}')
-
-    hyper_parameters = spec.get('hyperparameters', {})
-    if not isinstance(hyper_parameters, dict):
-        raise ValueError(f'Invalid hyperparameters: {hyper_parameters} in spec: {spec}')
-
-    return ModelTraining(
-        name=name,
-        version=version,
-        work_dir=work_dir,
-        entrypoint=entry_point,
-        hyper_parameters=hyper_parameters,
-    )
+    return K8sTrainer.from_dict(mt)
 
 
 def copytree(src, dst):
@@ -210,8 +157,8 @@ def save_models(mlflow_run: mlflow.projects.SubmittedRun, model_training: ModelT
                 'conda_path': conda_path
             },
             'model': {
-                'name': model_training.name,
-                'version': model_training.version,
+                'name': model_training.spec.model.name,
+                'version': model_training.spec.model.version,
                 'workDir': MODEL_SUBFOLDER,
                 'entrypoint': 'entrypoint'
             },
@@ -219,7 +166,10 @@ def save_models(mlflow_run: mlflow.projects.SubmittedRun, model_training: ModelT
                 'name': 'mlflow',
                 'version': mlflow.__version__
             },
-            'legionVersion': '1.0'
+            'legionVersion': '1.0',
+            'output': {
+                'run_id': mlflow_run.run_id
+            }
         }
 
         yaml.dump(data, proj_stream)
@@ -245,43 +195,41 @@ def train_models(model_training: ModelTraining) -> mlflow.projects.SubmittedRun:
     client = mlflow.tracking.MlflowClient(tracking_uri=tracking_uri)
 
     # Registering of experiment on tracking server if it is not exist
-    logging.info(f"Searching for experiment with name {model_training.name}")
-    experiment = client.get_experiment_by_name(model_training.name)
+    logging.info(f"Searching for experiment with name {model_training.spec.model.name}")
+    experiment = client.get_experiment_by_name(model_training.spec.model.name)
 
     if experiment:
         experiment_id = experiment.experiment_id
         logging.info(f"Experiment {experiment_id} has been found")
     else:
-        logging.info(f"Creating new experiment with name {model_training.name}")
-        experiment_id = client.create_experiment(model_training.name)
+        logging.info(f"Creating new experiment with name {model_training.spec.model.name}")
+        experiment_id = client.create_experiment(model_training.spec.model.name)
 
         logging.info(f"Experiment {experiment_id} has been created")
-        client.get_experiment_by_name(model_training.name)
+        client.get_experiment_by_name(model_training.spec.model.name)
 
     # Starting run and awaiting of finish of run
-    logging.info(f"Starting MLflow's run function. Parameters: [project directory: {model_training.work_dir}, "
-                 f"entry point: {model_training.entrypoint}, hyper parameters: {model_training.hyper_parameters},"
+    logging.info(f"Starting MLflow's run function. Parameters: [project directory: {model_training.spec.work_dir}, "
+                 f"entry point: {model_training.spec.entrypoint}, "
+                 f"hyper parameters: {model_training.spec.hyper_parameters}, "
                  f"experiment id={experiment_id}]")
     run = mlflow.projects.run(
-        uri=model_training.work_dir,
-        entry_point=model_training.entrypoint,
-        parameters=model_training.hyper_parameters,
+        uri=model_training.spec.work_dir,
+        entry_point=model_training.spec.entrypoint,
+        parameters=model_training.spec.hyper_parameters,
         experiment_id=experiment_id,
         backend='local',
         synchronous=True
     )
 
+    # TODO: refactor
+    client.set_tag(run.run_id, "training_id", model_training.id)
+    client.set_tag(run.run_id, "model_name", model_training.spec.model.name)
+    client.set_tag(run.run_id, "model_version", model_training.spec.model.version)
+
     logging.info(f"MLflow's run function finished. Run ID: {run.run_id}")
 
     return run
-
-
-def update_pid_file(pid_file: str, value: int) -> None:
-    """
-    Update PID file (save value to PID file)
-    """
-    with open(pid_file, 'w+') as f:
-        f.write(str(value))
 
 
 def setup_logging(args: argparse.Namespace) -> None:
@@ -294,35 +242,26 @@ def setup_logging(args: argparse.Namespace) -> None:
                         level=log_level)
 
 
-if __name__ == '__main__':
+def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--verbose", action='store_true', help="more extensive logging")
     parser.add_argument("--mt-file", '--mt', type=str, required=True,
                         help="json/yaml file with a mode training resource")
     parser.add_argument("--target", type=str, default='mlflow_output',
                         help="directory where result model will be saved")
-    parser.add_argument("--pid-file", type=str, default="mlflow.pid",
-                        help="Path of pid file")
     args = parser.parse_args()
 
     # Setup logging
     setup_logging(args)
-
     try:
-        # Set PID of current process
-        update_pid_file(args.pid_file, os.getpid())
-
         # Parse ModelTraining entity
         model_training = parse_model_training_entity(args.mt_file)
 
         # Start MLflow training process
-        mlflow_run = train_models(model_training)
+        mlflow_run = train_models(model_training.model_training)
 
         # Save MLflow models as Legion artifact
-        save_models(mlflow_run, model_training, args.target)
-
-        # Save 0 as PID if file in success
-        update_pid_file(args.pid_file, 0)
+        save_models(mlflow_run, model_training.model_training, args.target)
     except Exception as e:
         error_message = f'Exception occurs during model training. Message: {e}'
 
@@ -331,6 +270,8 @@ if __name__ == '__main__':
         else:
             logging.error(error_message)
 
-        # Save -1 as PID in file if error
-        update_pid_file(args.pid_file, -1)
         sys.exit(2)
+
+
+if __name__ == '__main__':
+    main()

@@ -1,10 +1,9 @@
 **
 !Makefile
-!__version__.py
-!entrypoint.py
 !README.md
-!runner.py
+!mlflowrunner
 !containers/**
 !scripts/**
 !helms/**
 !examples/**
+!setup.py
