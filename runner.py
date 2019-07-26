@@ -276,14 +276,6 @@ def train_models(model_training: ModelTraining) -> mlflow.projects.SubmittedRun:
     return run
 
 
-def update_pid_file(pid_file: str, value: int) -> None:
-    """
-    Update PID file (save value to PID file)
-    """
-    with open(pid_file, 'w+') as f:
-        f.write(str(value))
-
-
 def setup_logging(args: argparse.Namespace) -> None:
     """
     Setup logging instance
@@ -301,17 +293,12 @@ if __name__ == '__main__':
                         help="json/yaml file with a mode training resource")
     parser.add_argument("--target", type=str, default='mlflow_output',
                         help="directory where result model will be saved")
-    parser.add_argument("--pid-file", type=str, default="mlflow.pid",
-                        help="Path of pid file")
     args = parser.parse_args()
 
     # Setup logging
     setup_logging(args)
 
     try:
-        # Set PID of current process
-        update_pid_file(args.pid_file, os.getpid())
-
         # Parse ModelTraining entity
         model_training = parse_model_training_entity(args.mt_file)
 
@@ -320,9 +307,6 @@ if __name__ == '__main__':
 
         # Save MLflow models as Legion artifact
         save_models(mlflow_run, model_training, args.target)
-
-        # Save 0 as PID if file in success
-        update_pid_file(args.pid_file, 0)
     except Exception as e:
         error_message = f'Exception occurs during model training. Message: {e}'
 
@@ -331,6 +315,4 @@ if __name__ == '__main__':
         else:
             logging.error(error_message)
 
-        # Save -1 as PID in file if error
-        update_pid_file(args.pid_file, -1)
         sys.exit(2)
