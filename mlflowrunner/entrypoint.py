@@ -1,7 +1,7 @@
 import functools
 import json
 import os
-import typing
+from typing import Optional, List, Dict, Union, Any, Tuple, Type
 
 # MLFlow packages
 import mlflow.models
@@ -22,36 +22,35 @@ MODEL_INPUT_SAMPLE_FILE = os.path.join(MODEL_LOCATION, 'head_input.pkl')
 MODEL_OUTPUT_SAMPLE_FILE = os.path.join(MODEL_LOCATION, 'head_output.pkl')
 
 
-def _type_to_open_api_format(t: type) -> typing.Optional[str]:
+def _type_to_open_api_format(t: Type) -> Tuple[Optional[str], Optional[Any]]:
     """
-    Convert type of column to OpenAPI type name
+    Convert type of column to OpenAPI type name and example
 
     :param t: object's type
-    :type t: type
-    :return: typing.Optional[str] -- name for OpenAPI
+    :return: name for OpenAPI
     """
     if isinstance(t, (str, bytes, bytearray)):
-        return 'string'
+        return 'string', ''
     if isinstance(t, bool):
-        return 'boolean'
+        return 'boolean', False
     if isinstance(t, int):
-        return 'integer'
+        return 'integer', 0
     if isinstance(t, float):
-        return 'number'
+        return 'number', 0
 
     if pdt.is_integer_dtype(t):
-        return 'integer'
+        return 'integer', 0
 
     if pdt.is_float_dtype(t):
-        return 'number'
+        return 'number', 0
 
     if pdt.is_string_dtype(t):
-        return 'string'
+        return 'string', ''
 
     if pdt.is_bool_dtype(t) or pdt.is_complex_dtype(t):
-        return 'string'
+        return 'string', ''
 
-    return None
+    return None, None
 
 
 class NumpyEncoder(json.JSONEncoder):
@@ -65,11 +64,11 @@ class NumpyEncoder(json.JSONEncoder):
         return json.JSONEncoder.default(self, o)
 
 
-def init():
+def init() -> str:
     """
     Initialize model and return prediction type
 
-    :return: str -- prediction type (matrix or objects)
+    :return: prediction type (matrix or objects)
     """
     model = mlflow.models.Model.load(MODEL_LOCATION)
     if mlflow.pyfunc.FLAVOR_NAME not in model.flavors:
@@ -80,15 +79,14 @@ def init():
     return 'matrix'
 
 
-def predict_on_matrix(input_matrix, provided_columns_names=None):
+def predict_on_matrix(input_matrix: List[List[Any]], provided_columns_names: Optional[List[str]] = None) \
+        -> Tuple[List[List[Any]], Tuple[str, ...]]:
     """
     Make prediction on a Matrix of values
 
     :param input_matrix: data for prediction
-    :type input_matrix: List[List[Any]]
-    :param provided_columns_names: (Optional). Name of columns for provided matrix.
-    :type provided_columns_names: typing.Optional[typing.List[str]]
-    :return: typing.Tuple[List[List[Any]]], typing.Tuple[str, ...] -- result matrix and result column names
+    :param provided_columns_names: Name of columns for provided matrix
+    :return: result matrix and result column names
     """
     if provided_columns_names:
         input_matrix = pd.DataFrame(input_matrix, columns=provided_columns_names)
@@ -123,11 +121,11 @@ def predict_on_matrix(input_matrix, provided_columns_names=None):
 
 
 @functools.lru_cache()
-def _input_df_sample():
+def _input_df_sample() -> Optional[pd.DataFrame]:
     """
     Internal function for getting input DataFrame sample
 
-    :return: typing.Optional[pandas.DataFrame] -- input sample if provided
+    :return: input sample if provided
     """
     if os.path.exists(MODEL_INPUT_SAMPLE_FILE):
         return pd.read_pickle(MODEL_INPUT_SAMPLE_FILE)
@@ -136,11 +134,11 @@ def _input_df_sample():
 
 
 @functools.lru_cache()
-def _output_df_sample():
+def _output_df_sample() -> Optional[pd.DataFrame]:
     """
     Internal function for getting output DataFrame sample
 
-    :return: typing.Optional[pandas.DataFrame] -- input sample if provided
+    :return: input sample if provided
     """
     if os.path.exists(MODEL_OUTPUT_SAMPLE_FILE):
         return pd.read_pickle(MODEL_OUTPUT_SAMPLE_FILE)
@@ -148,29 +146,28 @@ def _output_df_sample():
         return None
 
 
-def _extract_df_properties(df: pd.DataFrame) -> dict:
+def _extract_df_properties(df: pd.DataFrame) -> List[Dict[str, Union[Union[str, None, bool], Any]]]:
     """
     Extract OpenAPI specification for pd.DataFrame columns
 
     :param df: pandas DataFrame
-    :type df: pd.DataFrame
-    :return: dict[str, dict] -- OpenAPI specification for parameters (each columns is parameter)
+    :return: OpenAPI specification for parameters (each columns is parameter)
     """
     if df is None:
-        return {}
+        return []
 
-    return {
-        column: {
-            'name': column,
-            'type': _type_to_open_api_format(df.dtypes[pos]),
-            'required': True
-        }
-        for pos, column in enumerate(df.columns)
-    }
+    props = []
+
+    for pos, column in enumerate(df.columns):
+        open_api_type, example = _type_to_open_api_format(df.dtypes.array[pos])
+
+        props.append({'name': column, 'type': open_api_type, 'example': example, 'required': True})
+
+    return props
 
 
 @functools.lru_cache()
-def info() -> typing.Tuple[typing.Dict[str, dict], typing.Dict[str, dict]]:
+def info() -> Tuple[List[Dict[str, Any]], List[Dict[str, Any]]]:
     """
     Get input and output schemas
 
@@ -186,6 +183,6 @@ def get_output_json_serializer() -> type:
     """
     Returns JSON serializer to be used in output
 
-    :return: type -- JSON serializer
+    :return: JSON serializer
     """
     return NumpyEncoder
