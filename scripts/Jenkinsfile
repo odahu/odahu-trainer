@@ -66,6 +66,11 @@ pipeline {
                         checkout scm: [$class: 'GitSCM', userRemoteConfigs: [[url: "${env.param_legion_infra_repo}"]], branches: [[name: "refs/tags/${env.param_legion_infra_version_tag}"]]], poll: false
 
                         print ("Load legion pipeline common library")
+                        sh """
+                        ls -al
+                        find .
+                        cat ${env.sharedLibPath}
+                        """
                         legion = load "${env.sharedLibPath}"
                     }
 
@@ -84,7 +89,7 @@ pipeline {
                 script {
                     print (env.param_stable_release)
                     if (env.param_stable_release.toBoolean() && env.param_push_git_tag.toBoolean()){
-                        legion.setGitReleaseTag()
+                        legion.setGitReleaseTag("${env.param_git_deploy_key}")
                     }
                     else {
                         print("Skipping release git tag push")
