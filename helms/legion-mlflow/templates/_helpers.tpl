@@ -104,7 +104,7 @@ Arguments:
     - .tpl - template for URI
 */}}
 {{- define "legion.ingress-domain-name" -}}
-{{ ternary .local.domain (printf .tpl .root.Release.Namespace .root.Values.ingress.globalDomain) (hasKey .local "domain") }}
+{{ ternary .local.domain (printf .tpl .root.Values.ingress.globalDomain) (hasKey .local "domain") }}
 {{- end -}}
 
 {{/*

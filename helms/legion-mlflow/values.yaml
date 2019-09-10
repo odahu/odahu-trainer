@@ -17,6 +17,10 @@ imagesRegistry: legionplatform/
 # - error
 logLevel: info
 
+# Legion EDI url
+# Type: string
+ediUrl: http://legion-edi.legion.svc.cluster.local
+
 # Configuration of Legion ingresses
 # Ingresses are for next <service>s
 # - edi

@@ -1,17 +1,15 @@
-import os
-import json
-import typing
 import functools
-
-# Third-party modules (is provided by MLFlow)
-import numpy as np
-import pandas as pd
-import pandas.api.types as pdt
+import json
+import os
+import typing
 
 # MLFlow packages
 import mlflow.models
 import mlflow.pyfunc
-
+# Third-party modules (is provided by MLFlow)
+import numpy as np
+import pandas as pd
+import pandas.api.types as pdt
 
 # Storage of loaded prediction function
 MODEL_FLAVOR = None
@@ -60,6 +58,7 @@ class NumpyEncoder(json.JSONEncoder):
     """
     Converts Numpy objects to Python's core objects
     """
+
     def default(self, o):
         if isinstance(o, np.generic):
             return o.item()
@@ -100,16 +99,25 @@ def predict_on_matrix(input_matrix, provided_columns_names=None):
     output_sample = _output_df_sample()
 
     if provided_columns_names and input_sample is not None:
-        input_matrix = input_matrix.reindex_like(input_sample)
+        input_matrix = input_matrix.reindex(columns=input_sample.columns)
 
     result = MODEL_FLAVOR.predict(input_matrix)
 
-    # Register column names, overwrite if we've a sample
-    result_columns = result.columns
+    result_columns = []
     if output_sample is not None:
         result_columns = output_sample.columns
 
-    output_matrix = result.to_numpy().tolist()
+    # Register column names, overwrite if we've a sample
+    if hasattr(result, 'columns'):
+        result_columns = result.columns
+
+    # TODO: think about better approach
+    if isinstance(result, pd.DataFrame):
+        output_matrix = result.to_numpy().tolist()
+    elif isinstance(result, np.ndarray):
+        output_matrix = result.tolist()
+    else:
+        output_matrix = result
 
     return output_matrix, tuple(result_columns)
 
@@ -148,41 +156,30 @@ def _extract_df_properties(df: pd.DataFrame) -> dict:
     :type df: pd.DataFrame
     :return: dict[str, dict] -- OpenAPI specification for parameters (each columns is parameter)
     """
+    if df is None:
+        return {}
+
     return {
         column: {
-            'title': column,
-            'type': _type_to_open_api_format(df.dtypes[pos])
+            'name': column,
+            'type': _type_to_open_api_format(df.dtypes[pos]),
+            'required': True
         }
         for pos, column in enumerate(df.columns)
     }
 
 
 @functools.lru_cache()
-def info() -> typing.Dict[str, dict]:
+def info() -> typing.Tuple[typing.Dict[str, dict], typing.Dict[str, dict]]:
     """
     Get input and output schemas
 
-    :return: typing.Dict[str, dict] -- OpenAPI specifications. Each specification is assigned to key (input / output)
+    :return: OpenAPI specifications. Each specification is assigned as (input / output)
     """
     input_sample = _input_df_sample()
     output_sample = _output_df_sample()
 
-    return {
-        'input': {
-            'title': 'PredictionParameters',
-            'description': 'Parameters for prediction',
-            'type': 'object',
-            'properties': _extract_df_properties(input_sample),
-            'required': list(input_sample.columns),
-        } if input_sample is not None else None,
-        'output': {
-            'title': 'PredictionResults',
-            'description': 'Results of prediction',
-            'type': 'object',
-            'properties': _extract_df_properties(output_sample),
-            'required': list(output_sample.columns),
-        } if output_sample is not None else None
-    }
+    return _extract_df_properties(input_sample), _extract_df_properties(output_sample)
 
 
 def get_output_json_serializer() -> type:
