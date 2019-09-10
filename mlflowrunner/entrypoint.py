@@ -162,7 +162,7 @@ def _extract_df_properties(df: pd.DataFrame) -> dict:
     return {
         column: {
             'name': column,
-            'type': _type_to_open_api_format(df.dtypes[pos]),
+            'type': _type_to_open_api_format(df.dtypes.array[pos]),
             'required': True
         }
         for pos, column in enumerate(df.columns)

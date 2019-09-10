@@ -27,8 +27,8 @@ RUN apt-get update --fix-missing && \
 
 # Install legionctl
 RUN pip install six
-RUN pip install -e 'git+https://github.com/legion-platform/legion.git@1.0.0-rc17#egg=legion-sdk&subdirectory=legion/sdk'
-RUN pip install -e 'git+https://github.com/legion-platform/legion.git@1.0.0-rc17#egg=legion-cli&subdirectory=legion/cli'
+RUN pip install -e 'git+https://github.com/legion-platform/legion.git@1.0.0-rc18#egg=legion-sdk&subdirectory=legion/sdk'
+RUN pip install -e 'git+https://github.com/legion-platform/legion.git@1.0.0-rc18#egg=legion-cli&subdirectory=legion/cli'
 
 #RUN legionctl --version
 
