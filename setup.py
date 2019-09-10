@@ -35,10 +35,8 @@ setup(
     },
     install_requires=[
         # TODO: fix dependencies when we will publish the legion packages to pypi repo
-        # TODO: change branch to develop
         # TODO: consider Pipenv usage
-        'legion-sdk @ git+https://github.com/legion-platform/legion.git@feat/930-pluggable-build-mechanism#egg=legion-sdk&subdirectory=legion/sdk',
-        # 'legion-cli @ git+https://github.com/legion-platform/legion.git@feat/930-pluggable-build-mechanism#egg=legion-cli&subdirectory=legion/cli',
+        'legion-sdk @ git+https://github.com/legion-platform/legion.git@1.0.0-rc17#egg=legion-sdk&subdirectory=legion/sdk',
         'mlflow==1.0.0',
         'PyYAML==5.1.2'
     ],
