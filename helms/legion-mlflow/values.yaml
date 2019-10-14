@@ -78,6 +78,12 @@ security:
     # Type: string
     # public_url: https://auth.my-company.com/oauth2/start?rd=https://$host$escaped_request_uri
 
+    # OAuth's cookie name
+    # Is required to add fix for big-sized cookies
+    # SHOULD be same as in oauth2 proxy configuration
+    # Type: string
+    cookieName: _oauth2_proxy
+
 # Tracking Server server configuration
 tracking_server:
   # Tracking Server might be disabled
