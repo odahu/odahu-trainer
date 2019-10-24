@@ -37,7 +37,7 @@ setup(
         # TODO: fix dependencies when we will publish the legion packages to pypi repo
         # TODO: consider Pipenv usage
         'legion-sdk @ git+https://github.com/legion-platform/legion.git@1.0.0-rc18#egg=legion-sdk&subdirectory=legion/sdk',
-        'mlflow==1.0.0',
+        'mlflow<=1.3.0,>=1.0.0',
         'PyYAML>=3.1.2'
     ],
     version='1.0.0'

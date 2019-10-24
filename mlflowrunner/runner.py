@@ -181,8 +181,8 @@ def train_models(model_training: ModelTraining) -> mlflow.projects.SubmittedRun:
     """
     logging.debug('Validating MLflow version')
     mlflow_version = parse_version(mlflow.__version__)
-    if mlflow_version < parse_version('1.0') or mlflow_version > parse_version('1.0'):
-        raise Exception(f'Unsupported version {mlflow_version}. Please use MLflow version 1.0.*')
+    if mlflow_version < parse_version('1.0') or mlflow_version > parse_version('1.3'):
+        raise Exception(f'Unsupported version {mlflow_version}. Please use MLflow versions >= 1.0.* but =< 1.3.* ')
 
     logging.info('Getting of tracking URI')
     tracking_uri = mlflow.tracking.utils.get_tracking_uri()
