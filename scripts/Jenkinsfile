@@ -69,7 +69,7 @@ pipeline {
                         if [ ! -d "legion-cicd" ]; then
                             git clone ${env.param_legion_cicd_repo} legion-cicd
                         fi
-                        cd legion-cicd && git checkout ${env.param_legion_cicd_branch}
+                        cd legion-cicd && git checkout ${env.param_legion_cicd_version_tag}
                         """
                     }
                     print ("Load legion pipeline common library")
@@ -211,13 +211,13 @@ pipeline {
             script {
                 // import Legion components
                 sshagent(["${env.param_legion_cicd_gitlab_key}"]) {
-                    print ("Checkout Legion-infra repo")
+                    print ("Checkout legion-cicd repo")
                     sh"""#!/bin/bash -ex
                     mkdir -p \$(getent passwd \$(whoami) | cut -d: -f6)/.ssh && ssh-keyscan git.epam.com >> \$(getent passwd \$(whoami) | cut -d: -f6)/.ssh/known_hosts
-                    if [ ! -d "legion-profiles" ]; then
-                        git clone ${env.param_legion_profiles_repo} legion-profiles
+                    if [ ! -d "legion-cicd" ]; then
+                        git clone ${env.param_legion_cicd_repo} legion-cicd
                     fi
-                    cd legion-profiles && git checkout ${env.param_legion_profiles_branch}
+                    cd legion-cicd && git checkout ${env.param_legion_cicd_version_tag}
                     """
                 }
                 print ("Load legion pipeline common library")
