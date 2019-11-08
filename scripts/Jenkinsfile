@@ -23,6 +23,10 @@ pipeline {
             param_release_version = "${params.ReleaseVersion}"
             //Git Branch to build package from
             param_git_branch = "${params.GitBranch}"
+            //Legion cicd repo url (for pipeline methods import)
+            param_legion_cicd_repo = "${params.LegionCicdRepo}"
+            //Legion repo version tag (tag or branch name)
+            param_legion_cicd_version_tag = "${params.LegionCicdVersionTag}"
             //Legion Infra repo url (for pipeline methods import)
             param_legion_infra_repo = "${params.LegionInfraRepo}"
             //Legion repo version tag (tag or branch name)
@@ -47,9 +51,15 @@ pipeline {
             param_docker_hub_registry = "${params.DockerHubRegistry}"
             param_git_deploy_key = "${params.GitDeployKey}"
             ///Job parameters
-            updateVersionScript = "scripts/update_version_id.py"
-            sharedLibPath = "pipelines/legionPipeline.groovy"
+            sharedLibPath = "legion-cicd/pipelines/legionPipeline.groovy"
             pathToCharts= "${WORKSPACE}/helms"
+
+            // PyPi
+            param_pypi_public_url = "${params.PyPiPublicUrl}"
+            param_pypi_public_creds = "pypi_public_cred"
+            param_pypi_private_url = "${params.PyPiPrivateUrl}"
+            param_pypi_private_creds = "nexus-local-repository"
+            param_pypi_publishing_enabled = "${PyPiPublishingEnabled}"
     }
 
     stages {
@@ -61,9 +71,15 @@ pipeline {
                     sh 'echo RunningOn: $(curl http://checkip.amazonaws.com/)'
 
                     // import Legion components
-                    dir("${WORKSPACE}/legion-aws") {
-                        print ("Checkout Legion-infra repo")
-                        checkout scm: [$class: 'GitSCM', userRemoteConfigs: [[url: "${env.param_legion_infra_repo}"]], branches: [[name: "refs/tags/${env.param_legion_infra_version_tag}"]]], poll: false
+                    sshagent(["${env.legionCicdGitlabKey}"]) {
+                        print ("Checkout Legion-cicd repo")
+                        sh"""#!/bin/bash -ex
+                        mkdir -p \$(getent passwd \$(whoami) | cut -d: -f6)/.ssh && ssh-keyscan git.epam.com >> \$(getent passwd \$(whoami) | cut -d: -f6)/.ssh/known_hosts
+                        if [ ! -d "legion-cicd" ]; then
+                            git clone ${env.param_legion_cicd_repo} legion-cicd
+                        fi
+                        cd legion-cicd && git checkout ${env.param_legion_cicd_version_tag}
+                        """
 
                         print ("Load legion pipeline common library")
                         legion = load "${env.sharedLibPath}"
@@ -72,8 +88,10 @@ pipeline {
                     print("Check code for security issues")
                     sh "bash scripts/install-git-secrets-hook.sh install_hooks && git secrets --scan -r"
 
-                    legion.setBuildMeta(env.updateVersionScript)
-
+                    verFiles = [
+                            "mlflowrunner/__version__.py",
+                    ]
+                    legion.setBuildMeta(verFiles)
                 }
             }
         }
@@ -170,6 +188,13 @@ pipeline {
                         }
                     }
                 }
+                stage("Upload PyPi Legion packages") {
+                    steps {
+                        script {
+                            legion.publishPythonPackage("./", env.param_pypi_private_creds, env.param_pypi_private_url, env.param_pypi_publishing_enabled, env.param_pypi_public_creds, env.param_pypi_public_url)
+                        }
+                    }
+                }
             }
         }
 
@@ -202,17 +227,6 @@ pipeline {
 
     post {
         always {
-            script {
-                // import Legion components
-                dir("${WORKSPACE}/legion-aws") {
-                    print ("Checkout Legion-infra repo")
-                    checkout scm: [$class: 'GitSCM', userRemoteConfigs: [[url: "${env.param_legion_infra_repo}"]], branches: [[name: "refs/tags/${env.param_legion_infra_version_tag}"]]], poll: false
-
-                    print ("Load legion pipeline common library")
-                    legion = load "${env.sharedLibPath}"
-                }
-                //legion.notifyBuild(currentBuild.currentResult)
-            }
             deleteDir()
         }
     }
