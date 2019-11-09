@@ -3,13 +3,13 @@ import json
 import os
 from typing import Optional, List, Dict, Union, Any, Tuple, Type
 
-# MLFlow packages
-import mlflow.models
-import mlflow.pyfunc
 # Third-party modules (is provided by MLFlow)
 import numpy as np
 import pandas as pd
 import pandas.api.types as pdt
+# MLFlow packages
+import mlflow.models
+import mlflow.pyfunc
 
 # Storage of loaded prediction function
 MODEL_FLAVOR = None
@@ -22,6 +22,7 @@ MODEL_INPUT_SAMPLE_FILE = os.path.join(MODEL_LOCATION, 'head_input.pkl')
 MODEL_OUTPUT_SAMPLE_FILE = os.path.join(MODEL_LOCATION, 'head_output.pkl')
 
 
+# pylint: disable=R0911
 def _type_to_open_api_format(t: Type) -> Tuple[Optional[str], Optional[Any]]:
     """
     Convert type of column to OpenAPI type name and example
@@ -58,6 +59,7 @@ class NumpyEncoder(json.JSONEncoder):
     Converts Numpy objects to Python's core objects
     """
 
+    # pylint: disable=E0202
     def default(self, o):
         if isinstance(o, np.generic):
             return o.item()
@@ -158,10 +160,10 @@ def _extract_df_properties(df: pd.DataFrame) -> List[Dict[str, Union[Union[str, 
 
     props = []
 
-    for pos, column in enumerate(df.columns):
-        open_api_type, example = _type_to_open_api_format(df.dtypes.array[pos])
+    for column_name, column_type in df.dtypes.items():
+        open_api_type, example = _type_to_open_api_format(column_type)
 
-        props.append({'name': column, 'type': open_api_type, 'example': example, 'required': True})
+        props.append({'name': column_name, 'type': open_api_type, 'example': example, 'required': True})
 
     return props
 

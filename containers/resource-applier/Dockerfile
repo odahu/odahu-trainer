@@ -26,10 +26,8 @@ RUN apt-get update --fix-missing && \
     rm -rf /var/lib/apt/lists/*
 
 # Install legionctl
-RUN pip install six
-RUN pip install -e 'git+https://github.com/legion-platform/legion.git@1.0.0-rc18#egg=legion-sdk&subdirectory=legion/sdk'
-RUN pip install -e 'git+https://github.com/legion-platform/legion.git@1.0.0-rc18#egg=legion-cli&subdirectory=legion/cli'
-
-#RUN legionctl --version
+RUN pip install -e 'git+https://github.com/odahu/odahu-flow@feat/1079-migration#egg=odahuflow-sdk&subdirectory=odahuFlow/sdk' && \
+    pip install -e 'git+https://github.com/odahu/odahu-flow@feat/1079-migration#egg=odahuflow-cli&subdirectory=odahuFlow/cli' && \
+    odahuflowctl --help
 
 CMD [ "/bin/bash" ]

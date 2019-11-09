@@ -17,17 +17,17 @@
 import os
 import re
 
-from setuptools import setup, find_packages
+from setuptools import setup, find_namespace_packages
 
 PACKAGE_ROOT_PATH = os.path.dirname(os.path.abspath(__file__))
-VERSION_FILE = os.path.join(PACKAGE_ROOT_PATH, 'mlflowrunner', '__version__.py')
+VERSION_FILE = os.path.join(PACKAGE_ROOT_PATH, 'odahuflow', 'mlflowrunner', '__version__.py')
 
 
 def extract_version() -> str:
     """
     Extract version from .py file using regex
 
-    :return: legion version
+    :return: Odahuflow version
     """
     with open(VERSION_FILE, 'rt') as version_file:
         file_content = version_file.read()
@@ -40,26 +40,35 @@ def extract_version() -> str:
 
 
 setup(
-    name='legion-mlflow-runner',
-    author='Legion Platform Team',
+    name='odahuflow-mlflow-runner',
+    author='Vlad Tokarev, Vitalik Solodilov',
+    author_email='vlad.tokarev.94@gmail.com, mcdkr@yandex.ru',
     license='Apache v2',
     classifiers=[
         'Programming Language :: Python :: 3.6',
         'Programming Language :: Python :: 3.7',
     ],
-    keywords='mlflow legion',
+    keywords='mlflow odahuflow',
     python_requires='>=3.6',
-    packages=find_packages(),
+    packages=find_namespace_packages(),
     data_files=[('', ["README.md"])],
     zip_safe=False,
     entry_points={
-        'console_scripts': ['legion-mlflow-runner=mlflowrunner.runner:main'],
+        'console_scripts': ['odahuflow-mlflow-runner=odahuflow.mlflowrunner.runner:main'],
     },
     install_requires=[
         # TODO: change to PyPi when we publish release
-        'legion-sdk @ git+https://github.com/legion-platform/legion.git@1.0.0-rc18#egg=legion-sdk&subdirectory=legion/sdk',
+        'odahuflow-sdk @ git+https://github.com/odahu/odahu-flow@feat/1079-migration#egg=odahuflow-sdk&subdirectory=odahuFlow/sdk',
         'mlflow<=1.3.0,>=1.0.0',
         'PyYAML>=3.1.2'
     ],
+    extras_require={
+        'testing': [
+            'pytest>=5.1.2',
+            'pytest-mock>=1.10.4',
+            'pytest-cov>=2.7.1',
+            'pylint>=2.3.0'
+        ]
+    },
     version=extract_version()
 )

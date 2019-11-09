@@ -2,25 +2,25 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: "{{ .Release.Name }}-legion-mlflow-tracking-server"
+  name: "{{ .Release.Name }}-odahuflow-mlflow-tracking-server"
 {{- if .Values.tracking_server.annotations }}
   annotations:
     {{ toYaml .Values.tracking_server.annotations | nindent 4 }}
 {{- end }}
   labels:
-    component: "legion-mlflow-tracking-server"
-    {{- include "legion.helm-labels" . | nindent 4 }}
+    component: "odahuflow-mlflow-tracking-server"
+    {{- include "odahuflow.helm-labels" . | nindent 4 }}
 spec:
   replicas: 1
   selector:
     matchLabels:
-      component: "legion-mlflow-tracking-server"
-      {{- include "legion.helm-labels-for-search" . | nindent 6 }}
+      component: "odahuflow-mlflow-tracking-server"
+      {{- include "odahuflow.helm-labels-for-search" . | nindent 6 }}
   template:
     metadata:
       labels:
-        component: "legion-mlflow-tracking-server"
-        {{- include "legion.helm-labels" . | nindent 8 }}
+        component: "odahuflow-mlflow-tracking-server"
+        {{- include "odahuflow.helm-labels" . | nindent 8 }}
       {{- if .Values.tracking_server.annotations }}
       annotations:
         {{ toYaml .Values.tracking_server.annotations | nindent 8 }}
@@ -28,7 +28,7 @@ spec:
     spec:
       containers:
       - name: mlflow
-        image: "{{ include "legion.image-name" (dict "root" . "service" .Values.tracking_server "tpl" "%slegion-mlflow-tracking-server:%s") }}"
+        image: "{{ include "odahuflow.image-name" (dict "root" . "service" .Values.tracking_server "tpl" "%sodahuflow-mlflow-tracking-server:%s") }}"
         resources:
           {{- toYaml .Values.tracking_server.resources | nindent 10 }}
         ports:
@@ -49,12 +49,12 @@ kind: Service
 metadata:
   name: "mlflow"
   labels:
-    component: "legion-mlflow-tracking-server"
-    {{- include "legion.helm-labels" . | nindent 4 }}
+    component: "odahuflow-mlflow-tracking-server"
+    {{- include "odahuflow.helm-labels" . | nindent 4 }}
 spec:
   selector:
-    component: "legion-mlflow-tracking-server"
-    {{- include "legion.helm-labels-for-search" . | nindent 4 }}
+    component: "odahuflow-mlflow-tracking-server"
+    {{- include "odahuflow.helm-labels-for-search" . | nindent 4 }}
   ports:
   - name: api
     targetPort: 5000

@@ -1,0 +1,20 @@
+name: odahuflow-mlflow
+version: 0.0.1
+appVersion: 0.0.1
+description: MLFlow integration for odahuflow platform
+keywords:
+- ML
+- odahuflow
+maintainers:
+  - name: Dmitrii Suslov
+    email: suslov.dimitriy@gmail.com
+  - name: Dmitriy Karbyshev
+    email: karbyshevds@gmail.com
+  - name: Max Kochubey
+    email: maxkochubey@gmail.com
+  - name: Vlad Tokarev
+    email: vlad.tokarev.94@gmail.com
+  - name: Kirill Makhonin
+    email: kirill@makhonin.biz
+  - name: Vitalik Solodilov
+    email: mcdkr@yandex.ru

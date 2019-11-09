@@ -23,6 +23,10 @@ import shutil
 import sys
 from urllib import parse
 
+import yaml
+from odahuflow.sdk.models import K8sTrainer
+from odahuflow.sdk.models import ModelTraining
+from pkg_resources import parse_version
 import mlflow
 import mlflow.models
 import mlflow.projects
@@ -30,13 +34,9 @@ import mlflow.pyfunc
 import mlflow.store.artifact_repository_registry
 import mlflow.tracking
 import mlflow.tracking.utils
-import yaml
-from legion.sdk.models import K8sTrainer
-from legion.sdk.models import ModelTraining
-from pkg_resources import parse_version
 
-MODEL_SUBFOLDER = 'legion_model'
-LEGION_PROJECT_DESCRIPTION = 'legion.project.yaml'
+MODEL_SUBFOLDER = 'odahuflow_model'
+ODAHUFLOW_PROJECT_DESCRIPTION = 'odahuflow.project.yaml'
 ENTRYPOINT = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'entrypoint.py')
 
 
@@ -148,7 +148,7 @@ def save_models(mlflow_run: mlflow.projects.SubmittedRun, model_training: ModelT
     entrypoint_target = os.path.join(mlflow_target_directory, 'entrypoint.py')
     shutil.copyfile(ENTRYPOINT, entrypoint_target)
 
-    project_file_path = os.path.join(target_directory, LEGION_PROJECT_DESCRIPTION)
+    project_file_path = os.path.join(target_directory, ODAHUFLOW_PROJECT_DESCRIPTION)
     with open(project_file_path, 'w') as proj_stream:
         data = {
             'binaries': {
@@ -166,7 +166,7 @@ def save_models(mlflow_run: mlflow.projects.SubmittedRun, model_training: ModelT
                 'name': 'mlflow',
                 'version': mlflow.__version__
             },
-            'legionVersion': '1.0',
+            'odahuflowVersion': '1.0',
             'output': {
                 'run_id': mlflow_run.run_id
             }
@@ -238,7 +238,7 @@ def setup_logging(args: argparse.Namespace) -> None:
     """
     log_level = logging.DEBUG if args.verbose else logging.INFO
 
-    logging.basicConfig(format='[legion][%(levelname)5s] %(asctime)s - %(message)s', datefmt='%d-%b-%y %H:%M:%S',
+    logging.basicConfig(format='[odahuflow][%(levelname)5s] %(asctime)s - %(message)s', datefmt='%d-%b-%y %H:%M:%S',
                         level=log_level)
 
 
@@ -260,7 +260,7 @@ def main():
         # Start MLflow training process
         mlflow_run = train_models(model_training.model_training)
 
-        # Save MLflow models as Legion artifact
+        # Save MLflow models as odahuflow artifact
         save_models(mlflow_run, model_training.model_training, args.target)
     except Exception as e:
         error_message = f'Exception occurs during model training. Message: {e}'

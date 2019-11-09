@@ -11,22 +11,22 @@ By default value from $.Chart.AppVersion is used
 Arguments:
     - . - root HELM scope
 */}}
-{{- define "legion.application-version" -}}
+{{- define "odahuflow.application-version" -}}
 {{ default .Chart.AppVersion .Values.toolchainVersion }}
 {{- end -}}
 
 {{/*
 Function builds default labels for all components
-It section uses "legion.application-version"
+It section uses "odahuflow.application-version"
 Arguments:
     - . - root HELM scope
 */}}
-{{- define "legion.helm-labels" -}}
+{{- define "odahuflow.helm-labels" -}}
 app.kubernetes.io/instance: {{ .Release.Name | quote }}
 app.kubernetes.io/managed-by: {{ .Release.Service | quote }}
-app.kubernetes.io/name: "legion"
+app.kubernetes.io/name: "odahuflow"
 helm.sh/chart: "{{ .Chart.Name }}-{{ .Chart.Version }}"
-app.kubernetes.io/version: "{{ include "legion.application-version" . }}"
+app.kubernetes.io/version: "{{ include "odahuflow.application-version" . }}"
 {{- end -}}
 
 {{/*
@@ -34,7 +34,7 @@ Function builds additional search labels
 Arguments:
     - . - root HELM scope
 */}}
-{{- define "legion.helm-labels-for-search" -}}
+{{- define "odahuflow.helm-labels-for-search" -}}
 app.kubernetes.io/instance: {{ .Release.Name | quote }}
 {{- end -}}
 
@@ -52,7 +52,7 @@ This section is under control by next sections / fields:
 Arguments:
     - . - root HELM scope
 */}}
-{{- define "legion.ingress-auth-annotations" -}}
+{{- define "odahuflow.ingress-auth-annotations" -}}
 {{- if .Values.security.enabled }}
 {{- if eq .Values.security.integration "oauth2_proxy" -}}
 nginx.ingress.kubernetes.io/configuration-snippet: |
@@ -95,7 +95,7 @@ This section is under control by .ingress.annoations section
 Arguments:
     - . - root HELM scope
 */}}
-{{- define "legion.ingress-default-root-annotations" -}}
+{{- define "odahuflow.ingress-default-root-annotations" -}}
 {{ range $key, $value := .Values.ingress.annotations }}
 {{- $key }}: {{ $value | quote }}
 {{ end -}}
@@ -103,15 +103,15 @@ Arguments:
 
 {{/*
 Function builds final ingress annotations for specific service
-This section uses "legion.ingress-default-root-annotations" and "legion.ingress-auth-annotations"
+This section uses "odahuflow.ingress-default-root-annotations" and "odahuflow.ingress-auth-annotations"
  and it's under control by .ingress.annoations section
 Arguments:
     - .root - root HELM scope
     - .local - service's ingress section (e.g. .Values.edi.ingress)
 */}}
-{{- define "legion.ingress-aggregated-annotations" -}}
-{{- include "legion.ingress-default-root-annotations" .root }}
-{{- include "legion.ingress-auth-annotations" .root }}
+{{- define "odahuflow.ingress-aggregated-annotations" -}}
+{{- include "odahuflow.ingress-default-root-annotations" .root }}
+{{- include "odahuflow.ingress-auth-annotations" .root }}
 {{ range $key, $value := .local.annotations }}
 {{- $key }}: {{ $value | quote }}
 {{ end -}}
@@ -125,7 +125,7 @@ Arguments:
     - .local - service's ingress section (e.g. .Values.edi.ingress)
     - .tpl - template for URI
 */}}
-{{- define "legion.ingress-domain-name" -}}
+{{- define "odahuflow.ingress-domain-name" -}}
 {{ ternary .local.domain (printf .tpl .root.Values.ingress.globalDomain) (hasKey .local "domain") }}
 {{- end -}}
 
@@ -136,7 +136,7 @@ Arguments:
     - .root - root HELM scope
     - .local - service's ingress section (e.g. .Values.edi.ingress)
 */}}
-{{- define "legion.ingress-tls-secret-name" -}}
+{{- define "odahuflow.ingress-tls-secret-name" -}}
 {{ required "TLS Secret name is required" (ternary .local.tlsSecretName .root.Values.ingress.tlsSecretName (hasKey .local "tlsSecretName")) }}
 {{- end -}}
 
@@ -151,8 +151,8 @@ Arguments:
     - .root - root HELM scope
     - .tpl - template for building default URI of image
 */}}
-{{- define "legion.default-image-name" -}}
-{{ printf .tpl .root.Values.imagesRegistry (include "legion.application-version" .root) }}
+{{- define "odahuflow.default-image-name" -}}
+{{ printf .tpl .root.Values.imagesRegistry (include "odahuflow.application-version" .root) }}
 {{- end -}}
 
 {{/*
@@ -162,14 +162,14 @@ Arguments:
     - .service - service's scope with desired image field
     - .tpl - template for building default URI of image
 */}}
-{{- define "legion.image-name" -}}
+{{- define "odahuflow.image-name" -}}
 {{- if .service }}
 {{- if (hasKey .service "image") }}
 {{ .service.image  }}
 {{- else -}}
-{{- include "legion.default-image-name" . -}}
+{{- include "odahuflow.default-image-name" . -}}
 {{ end }}
 {{- else }}
-{{- include "legion.default-image-name" . -}}
+{{- include "odahuflow.default-image-name" . -}}
 {{ end }}
 {{- end -}}

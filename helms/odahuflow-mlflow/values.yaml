@@ -4,10 +4,10 @@
 # toolchainVersion: "1.0"
 
 # Docker images registry
-# This registry will be used for automatic docker image name deduction based on Legion naming for images
+# This registry will be used for automatic docker image name deduction based on odahuflow naming for images
 # Each image could be overridden manually in .<service>.image, please see .edi root section or other
 # Type: string
-imagesRegistry: legionplatform/
+imagesRegistry: odahu/
 
 # Verbosity of logging features in components
 # Valid values are:
@@ -17,11 +17,11 @@ imagesRegistry: legionplatform/
 # - error
 logLevel: info
 
-# Legion EDI url
+# Odahuflow EDI url
 # Type: string
-ediUrl: http://legion-edi.legion.svc.cluster.local
+ediUrl: http://odahuflow-edi.odahuflow.svc.cluster.local
 
-# Configuration of Legion ingresses
+# Configuration of Odahuflow ingresses
 # Ingresses are for next <service>s
 # - edi
 # - edge
