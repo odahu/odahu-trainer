@@ -26,7 +26,7 @@ pipeline {
             //Legion cicd repo url (for pipeline methods import)
             param_legion_cicd_repo = "${params.LegionCicdRepo}"
             //Legion repo version tag (tag or branch name)
-            param_legion_cicd_version_tag = "${params.LegionCicdVersionTag}"
+            param_legion_cicd_branch = "${params.LegionCicdBranch}"
             //Legion Infra repo url (for pipeline methods import)
             param_legion_infra_repo = "${params.LegionInfraRepo}"
             //Legion repo version tag (tag or branch name)
@@ -60,6 +60,8 @@ pipeline {
             param_pypi_private_url = "${params.PyPiPrivateUrl}"
             param_pypi_private_creds = "nexus-local-repository"
             param_pypi_publishing_enabled = "${PyPiPublishingEnabled}"
+
+            param_dockerhub_publishing_enabled = "${params.DockerHubPublishingEnabled}"
     }
 
     stages {
@@ -78,20 +80,17 @@ pipeline {
                         if [ ! -d "legion-cicd" ]; then
                             git clone ${env.param_legion_cicd_repo} legion-cicd
                         fi
-                        cd legion-cicd && git checkout ${env.param_legion_cicd_version_tag}
+                        cd legion-cicd && git checkout ${env.param_legion_cicd_branch}
                         """
 
                         print ("Load legion pipeline common library")
-                        legion = load "${env.sharedLibPath}"
+                        cicdLibrary = load "${env.sharedLibPath}"
                     }
 
-                    print("Check code for security issues")
-                    sh "bash scripts/install-git-secrets-hook.sh install_hooks && git secrets --scan -r"
-
                     verFiles = [
-                            "mlflowrunner/__version__.py",
+                            "mlflow/odahuflow/mlflowrunner/__version__.py",
                     ]
-                    legion.setBuildMeta(verFiles)
+                    cicdLibrary.setBuildMeta(verFiles)
                 }
             }
         }
@@ -102,7 +101,7 @@ pipeline {
                 script {
                     print (env.param_stable_release)
                     if (env.param_stable_release.toBoolean() && env.param_push_git_tag.toBoolean()){
-                        legion.setGitReleaseTag("${env.param_git_deploy_key}")
+                        cicdLibrary.setGitReleaseTag("${env.param_git_deploy_key}")
                     }
                     else {
                         print("Skipping release git tag push")
@@ -111,67 +110,33 @@ pipeline {
             }
         }
 
-        stage("Docker login") {
-            steps {
-                withCredentials([[
-                 $class: 'UsernamePasswordMultiBinding',
-                 credentialsId: 'nexus-local-repository',
-                 usernameVariable: 'USERNAME',
-                 passwordVariable: 'PASSWORD']]) {
-                    sh "docker login -u ${USERNAME} -p ${PASSWORD} ${env.param_docker_registry}"
-                }
-                script {
-                    if (env.param_stable_release.toBoolean()) {
-                        withCredentials([[
-                        $class: 'UsernamePasswordMultiBinding',
-                        credentialsId: 'dockerhub',
-                        usernameVariable: 'USERNAME',
-                        passwordVariable: 'PASSWORD']]) {
-                            sh "docker login -u ${USERNAME} -p ${PASSWORD}"
-                        }
-                    }
-                }
-            }
-        }
         stage("Build Docker images & Run Tests") {
             parallel {
-                stage("Build & upload toolchain Docker image"){
+                stage("Build toolchain Docker image"){
                     steps {
                         script {
-                            legion.buildLegionImage('legion-mlflow-toolchain', '.', 'containers/mlflow-toolchain/Dockerfile')
-                            legion.uploadDockerImage('legion-mlflow-toolchain')
+                            cicdLibrary.buildLegionImage('odahuflow-mlflow-toolchain', '.', 'containers/mlflow-toolchain/Dockerfile')
                         }
                     }
                 }
-                stage("Build & upload gpu toolchain Docker image"){
+                stage("Build gpu toolchain Docker image"){
                     steps {
                         script {
-                            legion.buildLegionImage('legion-mlflow-toolchain-gpu', '.', 'containers/mlflow-toolchain-gpu/Dockerfile')
-                            legion.uploadDockerImage('legion-mlflow-toolchain-gpu')
+                            cicdLibrary.buildLegionImage('odahuflow-mlflow-toolchain-gpu', '.', 'containers/mlflow-toolchain-gpu/Dockerfile')
                         }
                     }
                 }
-                stage('Build & upload tracking-server Docker image') {
+                stage('Build tracking-server Docker image') {
                     steps {
                         script {
-                            legion.buildLegionImage('legion-mlflow-tracking-server', '.', 'containers/mlflow-tracking-server/Dockerfile')
-                            legion.uploadDockerImage('legion-mlflow-tracking-server')
+                            cicdLibrary.buildLegionImage('odahuflow-mlflow-tracking-server', '.', 'containers/mlflow-tracking-server/Dockerfile')
                         }
                     }
                 }
-                stage('Build & upload pipline-agent Docker image') {
+                stage('Build resource-applier Docker image') {
                     steps {
                         script {
-                            legion.buildLegionImage('legion-mlflow-pipeline-agent', '.', 'containers/mlflow-pipeline-agent/Dockerfile')
-                            legion.uploadDockerImage('legion-mlflow-pipeline-agent')
-                        }
-                    }
-                }
-                stage('Build & upload resource-applier Docker image') {
-                    steps {
-                        script {
-                            legion.buildLegionImage('resource-applier', '.', 'containers/resource-applier/Dockerfile')
-                            legion.uploadDockerImage('resource-applier')
+                            cicdLibrary.buildLegionImage('odahuflow-trainer-resource-applier', '.', 'containers/resource-applier/Dockerfile')
                         }
                     }
                 }
@@ -179,19 +144,45 @@ pipeline {
         }
         stage('Upload artifacts'){
             parallel {
-                stage('Package and upload helm charts'){
-                    steps {
-                        script {
-                            docker.image("legion/legion-mlflow-pipeline-agent:${Globals.buildVersion}").inside("-v /var/run/docker.sock:/var/run/docker.sock -u root") {
-                                legion.uploadHelmCharts(env.pathToCharts)
-                            }
-                        }
-                    }
-                }
                 stage("Upload PyPi Legion packages") {
                     steps {
                         script {
-                            legion.publishPythonPackage("./", env.param_pypi_private_creds, env.param_pypi_private_url, env.param_pypi_publishing_enabled, env.param_pypi_public_creds, env.param_pypi_public_url)
+                            cicdLibrary.publishPythonPackage("mlflow/", env.param_pypi_private_creds, env.param_pypi_private_url, env.param_pypi_publishing_enabled, env.param_pypi_public_creds, env.param_pypi_public_url)
+                        }
+                    }
+                }
+                stage('Package and upload helm charts') {
+                    steps {
+                        script {
+                            cicdLibrary.uploadHelmCharts(env.pathToCharts)
+                        }
+                    }
+                }
+                stage("Upload toolchain Docker image"){
+                    steps {
+                        script {
+                            cicdLibrary.uploadDockerImage('odahuflow-mlflow-toolchain', env.param_stable_release.toBoolean() && env.param_dockerhub_publishing_enabled.toBoolean())
+                        }
+                    }
+                }
+                stage("Upload gpu toolchain Docker image"){
+                    steps {
+                        script {
+                            cicdLibrary.uploadDockerImage('odahuflow-mlflow-toolchain-gpu', env.param_stable_release.toBoolean() && env.param_dockerhub_publishing_enabled.toBoolean())
+                        }
+                    }
+                }
+                stage('Upload tracking-server Docker image') {
+                    steps {
+                        script {
+                            cicdLibrary.uploadDockerImage('odahuflow-mlflow-tracking-server', env.param_stable_release.toBoolean() && env.param_dockerhub_publishing_enabled.toBoolean())
+                        }
+                    }
+                }
+                stage('Upload resource-applier Docker image') {
+                    steps {
+                        script {
+                            cicdLibrary.uploadDockerImage('odahuflow-trainer-resource-applier', env.param_stable_release.toBoolean() && env.param_dockerhub_publishing_enabled.toBoolean())
                         }
                     }
                 }
@@ -202,7 +193,7 @@ pipeline {
             steps {
                 script {
                     if (env.param_stable_release.toBoolean() && env.param_update_version_string.toBoolean()) {
-                        legion.updateVersionString('__version__.py')
+                        cicdLibrary.updateVersionString('mlflow/odahuflow/mlflowrunner/__version__.py')
                     }
                     else {
                         print("Skipping version string update")
@@ -215,7 +206,7 @@ pipeline {
             steps {
                 script {
                     if (env.param_update_master.toBoolean()){
-                        legion.updateMasterBranch()
+                        cicdLibrary.updateMasterBranch()
                     }
                     else {
                         print("Skipping Master branch update")

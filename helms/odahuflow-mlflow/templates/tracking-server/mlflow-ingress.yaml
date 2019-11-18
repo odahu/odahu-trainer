@@ -5,14 +5,14 @@ apiVersion: extensions/v1beta1
 kind: Ingress
 metadata:
   annotations:
-  {{- include "legion.ingress-aggregated-annotations" (dict "local" .Values.tracking_server.ingress "root" .) | nindent 4 }}
+  {{- include "odahuflow.ingress-aggregated-annotations" (dict "local" .Values.tracking_server.ingress "root" .) | nindent 4 }}
   labels:
-    component: "legion-mlflow-tracking-server"
-    {{- include "legion.helm-labels" . | nindent 4 }}
+    component: "odahuflow-mlflow-tracking-server"
+    {{- include "odahuflow.helm-labels" . | nindent 4 }}
   name: "{{ .Release.Name }}-mlflow-tracking-server"
 spec:
   rules:
-    - host: {{ include "legion.ingress-domain-name" (dict "local" .Values.tracking_server.ingress "root" . "tpl" "mlflow.%s") }}
+    - host: {{ include "odahuflow.ingress-domain-name" (dict "local" .Values.tracking_server.ingress "root" . "tpl" "mlflow.%s") }}
       http:
         paths:
           - backend:
@@ -21,8 +21,8 @@ spec:
   {{- if (ternary $.Values.tracking_server.ingress.tlsEnabled $.Values.ingress.tlsEnabled (hasKey $.Values.tracking_server.ingress "tlsEnabled")) }}
   tls:
   - hosts:
-    - {{ include "legion.ingress-domain-name" (dict "local" .Values.tracking_server.ingress "root" . "tpl" "mlflow.%s") | quote }}
-    secretName: {{ include "legion.ingress-tls-secret-name" (dict "local" .Values.tracking_server.ingress "root" . ) | quote }}
+    - {{ include "odahuflow.ingress-domain-name" (dict "local" .Values.tracking_server.ingress "root" . "tpl" "mlflow.%s") | quote }}
+    secretName: {{ include "odahuflow.ingress-tls-secret-name" (dict "local" .Values.tracking_server.ingress "root" . ) | quote }}
   {{- end }}
 {{- end }}
 {{- end }}

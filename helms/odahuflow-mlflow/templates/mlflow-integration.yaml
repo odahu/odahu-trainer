@@ -4,7 +4,7 @@ apiVersion: v1
 metadata:
   name: "{{ .Release.Name }}-mlflow-resources"
   labels:
-    {{- include "legion.helm-labels" . | nindent 4 }}
+    {{- include "odahuflow.helm-labels" . | nindent 4 }}
 data:
   resources.yaml: |
     kind: ToolchainIntegration
@@ -12,16 +12,16 @@ data:
     spec:
       additionalEnvironments:
         MLFLOW_TRACKING_URI: http://mlflow.{{ .Release.Namespace }}.svc.cluster.local
-      defaultImage: "{{ include "legion.image-name" (dict "root" . "service" .Values.tracking_server "tpl" "%slegion-mlflow-toolchain:%s") }}"
-      entrypoint: /opt/conda/bin/legion-mlflow-runner
+      defaultImage: "{{ include "odahuflow.image-name" (dict "root" . "service" .Values.tracking_server "tpl" "%sodahuflow-mlflow-toolchain:%s") }}"
+      entrypoint: /opt/conda/bin/odahuflow-mlflow-runner
     ---
     kind: ToolchainIntegration
     id: mlflow-gpu
     spec:
       additionalEnvironments:
         MLFLOW_TRACKING_URI: http://mlflow.{{ .Release.Namespace }}.svc.cluster.local
-      defaultImage: "{{ include "legion.image-name" (dict "root" . "service" .Values.tracking_server "tpl" "%slegion-mlflow-toolchain-gpu:%s") }}"
-      entrypoint: /opt/conda/bin/legion-mlflow-runner
+      defaultImage: "{{ include "odahuflow.image-name" (dict "root" . "service" .Values.tracking_server "tpl" "%sodahuflow-mlflow-toolchain-gpu:%s") }}"
+      entrypoint: /opt/conda/bin/odahuflow-mlflow-runner
 ---
 apiVersion: batch/v1
 kind: Job
@@ -29,7 +29,7 @@ metadata:
   name: "{{ .Release.Name }}-mlflow-resources-uploader"
   labels:
     component: "mlflow-resources-uploader"
-    {{- include "legion.helm-labels" . | nindent 4 }}
+    {{- include "odahuflow.helm-labels" . | nindent 4 }}
   annotations:
     "helm.sh/hook": post-install,post-upgrade
     "helm.sh/hook-weight": "-5"
@@ -47,13 +47,13 @@ spec:
         env:
           - name: EDI_URL
             value: {{ .Values.ediUrl }}
-        image: "{{ include "legion.image-name" (dict "root" . "service" .Values.tracking_server "tpl" "%sresource-applier:%s") }}"
+        image: "{{ include "odahuflow.image-name" (dict "root" . "service" .Values.tracking_server "tpl" "%sodahuflow-trainer-resource-applier:%s") }}"
         volumeMounts:
-          - mountPath: /opt/legion
+          - mountPath: /opt/odahuflow
             name: resources
         command:
-          - legionctl
+          - odahuflowctl
           - bulk
           - apply
-          - /opt/legion/resources.yaml
+          - /opt/odahuflow/resources.yaml
 {{- end }}

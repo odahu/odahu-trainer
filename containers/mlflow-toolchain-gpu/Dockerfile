@@ -37,10 +37,10 @@ RUN wget --quiet ${MINICONDA_URL}  -O ~/miniconda.sh && \
     echo ". /opt/conda/etc/profile.d/conda.sh" >> ~/.bashrc && \
     echo "conda activate base" >> ~/.bashrc
 
-ARG LEGION_DIR=/opt/legion
+ARG ODAHUFLOW_DIR=/opt/odahuflow
 RUN pip install --upgrade pip
 
-COPY ./ ${LEGION_DIR}
-RUN pip install -I -e ${LEGION_DIR}
+COPY mlflow/ ${ODAHUFLOW_DIR}/
+RUN pip install -I -e ${ODAHUFLOW_DIR}
 
 CMD [ "/bin/bash" ]

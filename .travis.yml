@@ -1,0 +1,36 @@
+language: python
+dist: bionic
+python: 3.6
+sudo: true
+services:
+  - docker
+install: skip
+jobs:
+  include:
+    - stage: security
+      before_script:
+        - sudo make install-vulnerabilities-checker
+      script:
+        - make check-vulnerabilities
+    - stage: unit tests
+      before_script:
+        - make install-mflow-runner
+        - make install-mflow-runner-tests
+      script:
+        - make test-mflow-runner
+        - odahuflow-mlflow-runner -h
+    - stage: docker builds
+      script:
+        - make docker-build-mlflow-toolchain
+    - script:
+        - make docker-build-mlflow-toolchain-gpu
+    - script:
+        - make docker-build-mlflow-tracking-server
+    - script:
+        - make docker-build-resource-applier
+    - stage: lint
+      before_script:
+        - make install-mflow-runner
+        - make install-mflow-runner-tests
+      script:
+        - make lint-mflow-runner

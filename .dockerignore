@@ -1,9 +1,7 @@
 **
 !Makefile
 !README.md
-!mlflowrunner
+!mlflow/**
 !containers/**
-!scripts/**
 !helms/**
-!examples/**
-!setup.py
+!scripts/**
