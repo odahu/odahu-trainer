@@ -40,7 +40,7 @@ def extract_version() -> str:
 
 
 setup(
-    name='odahuflow-mlflow-runner',
+    name='odahu-flow-mlflow-runner',
     author='Vlad Tokarev, Vitalik Solodilov',
     author_email='vlad.tokarev.94@gmail.com, mcdkr@yandex.ru',
     license='Apache v2',
@@ -48,17 +48,17 @@ setup(
         'Programming Language :: Python :: 3.6',
         'Programming Language :: Python :: 3.7',
     ],
-    keywords='mlflow odahuflow',
+    keywords='mlflow odahu-flow',
     python_requires='>=3.6',
     packages=find_namespace_packages(),
     data_files=[('', ["README.md"])],
     zip_safe=False,
     entry_points={
-        'console_scripts': ['odahuflow-mlflow-runner=odahuflow.mlflowrunner.runner:main'],
+        'console_scripts': ['odahu-flow-mlflow-runner=odahuflow.mlflowrunner.runner:main'],
     },
     install_requires=[
         # TODO: change to PyPi when we publish release
-        'odahuflow-sdk @ git+https://github.com/odahu/odahu-flow@feat/1079-migration#egg=odahuflow-sdk&subdirectory=odahuFlow/sdk',
+        'odahu-flow-sdk @ git+https://github.com/odahu/odahu-flow@1.0.0-rc27#egg=odahu-flow-sdk&subdirectory=packages/sdk',
         'mlflow<=1.3.0,>=1.0.0',
         'PyYAML>=3.1.2'
     ],

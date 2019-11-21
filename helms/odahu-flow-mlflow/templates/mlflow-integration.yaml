@@ -12,16 +12,16 @@ data:
     spec:
       additionalEnvironments:
         MLFLOW_TRACKING_URI: http://mlflow.{{ .Release.Namespace }}.svc.cluster.local
-      defaultImage: "{{ include "odahuflow.image-name" (dict "root" . "service" .Values.tracking_server "tpl" "%sodahuflow-mlflow-toolchain:%s") }}"
-      entrypoint: /opt/conda/bin/odahuflow-mlflow-runner
+      defaultImage: "{{ include "odahuflow.image-name" (dict "root" . "service" .Values.tracking_server "tpl" "%sodahu-flow-mlflow-toolchain:%s") }}"
+      entrypoint: /opt/conda/bin/odahu-flow-mlflow-runner
     ---
     kind: ToolchainIntegration
     id: mlflow-gpu
     spec:
       additionalEnvironments:
         MLFLOW_TRACKING_URI: http://mlflow.{{ .Release.Namespace }}.svc.cluster.local
-      defaultImage: "{{ include "odahuflow.image-name" (dict "root" . "service" .Values.tracking_server "tpl" "%sodahuflow-mlflow-toolchain-gpu:%s") }}"
-      entrypoint: /opt/conda/bin/odahuflow-mlflow-runner
+      defaultImage: "{{ include "odahuflow.image-name" (dict "root" . "service" .Values.tracking_server "tpl" "%sodahu-flow-mlflow-toolchain-gpu:%s") }}"
+      entrypoint: /opt/conda/bin/odahu-flow-mlflow-runner
 ---
 apiVersion: batch/v1
 kind: Job
@@ -45,15 +45,15 @@ spec:
       containers:
       - name: mlflow-resources-uploader
         env:
-          - name: EDI_URL
-            value: {{ .Values.ediUrl }}
-        image: "{{ include "odahuflow.image-name" (dict "root" . "service" .Values.tracking_server "tpl" "%sodahuflow-trainer-resource-applier:%s") }}"
+          - name: API_URL
+            value: {{ .Values.apiUrl }}
+        image: "{{ include "odahuflow.image-name" (dict "root" . "service" .Values.tracking_server "tpl" "%sodahu-flow-trainer-resource-applier:%s") }}"
         volumeMounts:
-          - mountPath: /opt/odahuflow
+          - mountPath: /opt/odahu-flow
             name: resources
         command:
           - odahuflowctl
           - bulk
           - apply
-          - /opt/odahuflow/resources.yaml
+          - /opt/odahu-flow/resources.yaml
 {{- end }}

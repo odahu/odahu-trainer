@@ -12,16 +12,17 @@ metadata:
   name: "{{ .Release.Name }}-mlflow-tracking-server"
 spec:
   rules:
-    - host: {{ include "odahuflow.ingress-domain-name" (dict "local" .Values.tracking_server.ingress "root" . "tpl" "mlflow.%s") }}
+    - host: {{ include "odahuflow.ingress-domain-name" (dict "local" .Values.tracking_server.ingress "root" . "tpl" "%s") }}
       http:
         paths:
           - backend:
               serviceName: "mlflow"
               servicePort: {{ .Values.tracking_server.port }}
+            path: {{ .Values.tracking_server.ingress.path }}
   {{- if (ternary $.Values.tracking_server.ingress.tlsEnabled $.Values.ingress.tlsEnabled (hasKey $.Values.tracking_server.ingress "tlsEnabled")) }}
   tls:
   - hosts:
-    - {{ include "odahuflow.ingress-domain-name" (dict "local" .Values.tracking_server.ingress "root" . "tpl" "mlflow.%s") | quote }}
+    - {{ include "odahuflow.ingress-domain-name" (dict "local" .Values.tracking_server.ingress "root" . "tpl" "%s") | quote }}
     secretName: {{ include "odahuflow.ingress-tls-secret-name" (dict "local" .Values.tracking_server.ingress "root" . ) | quote }}
   {{- end }}
 {{- end }}

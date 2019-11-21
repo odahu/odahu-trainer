@@ -82,7 +82,7 @@ nginx.ingress.kubernetes.io/configuration-snippet: |
 {{- if hasKey .Values.security.oauth2_proxy "public_url" }}
 nginx.ingress.kubernetes.io/auth-signin: {{ .Values.security.oauth2_proxy.public_url }}
 {{- else }}
-nginx.ingress.kubernetes.io/auth-signin: {{ ternary "https" "http" .Values.ingress.tlsEnabled }}://auth.{{ .Values.ingress.globalDomain }}/oauth2/start?rd=https://$host$escaped_request_uri
+nginx.ingress.kubernetes.io/auth-signin: {{ ternary "https" "http" .Values.ingress.tlsEnabled }}://{{ .Values.ingress.globalDomain }}/oauth2/start?rd=https://$host$escaped_request_uri
 {{- end }}
 nginx.ingress.kubernetes.io/auth-url: {{ .Values.security.oauth2_proxy.url }}
 {{- end }}

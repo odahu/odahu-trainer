@@ -1,6 +1,6 @@
 # 1. About
 
-This repository contains MLFlow integration toolchain for [Legion platform](https://github.com/legion-platform/legion).
+This repository contains MLFlow integration toolchain for [Odahu platform](https://github.com/odahu/odahu-flow).
 
 # 2. What does it do?
 
