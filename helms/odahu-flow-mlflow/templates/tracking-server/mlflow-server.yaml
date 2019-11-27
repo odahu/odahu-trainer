@@ -28,16 +28,19 @@ spec:
     spec:
       containers:
       - name: mlflow
-        image: "{{ include "odahuflow.image-name" (dict "root" . "service" .Values.tracking_server "tpl" "%sodahuflow-mlflow-tracking-server:%s") }}"
+        image: "{{ include "odahuflow.image-name" (dict "root" . "service" .Values.tracking_server "tpl" "%sodahu-flow-mlflow-tracking-server:%s") }}"
         resources:
           {{- toYaml .Values.tracking_server.resources | nindent 10 }}
+        env:
+          - name: _MLFLOW_STATIC_PREFIX
+            value: {{ .Values.tracking_server.ingress.path }}
         ports:
         - containerPort: 5000
           name: api
           protocol: TCP
         livenessProbe:
           httpGet:
-            path: /
+            path: {{ .Values.tracking_server.ingress.path }}
             port: 5000
           initialDelaySeconds: 120
           timeoutSeconds: 8

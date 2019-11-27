@@ -18,7 +18,7 @@ jobs:
         - make install-mflow-runner-tests
       script:
         - make test-mflow-runner
-        - odahuflow-mlflow-runner -h
+        - odahu-flow-mlflow-runner -h
     - stage: docker builds
       script:
         - make docker-build-mlflow-toolchain

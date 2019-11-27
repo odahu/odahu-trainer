@@ -4,8 +4,8 @@
 # toolchainVersion: "1.0"
 
 # Docker images registry
-# This registry will be used for automatic docker image name deduction based on odahuflow naming for images
-# Each image could be overridden manually in .<service>.image, please see .edi root section or other
+# This registry will be used for automatic docker image name deduction based on odahu-flow naming for images
+# Each image could be overridden manually in .<service>.image, please see .api root section or other
 # Type: string
 imagesRegistry: odahu/
 
@@ -17,13 +17,13 @@ imagesRegistry: odahu/
 # - error
 logLevel: info
 
-# Odahuflow EDI url
+# Odahuflow API url
 # Type: string
-ediUrl: http://odahuflow-edi.odahuflow.svc.cluster.local
+apiUrl: http://odahu-flow-api.odahu-flow.svc.cluster.local
 
 # Configuration of Odahuflow ingresses
 # Ingresses are for next <service>s
-# - edi
+# - api
 # - edge
 ingress:
   # Global flag for Ingress enabling
@@ -102,7 +102,7 @@ tracking_server:
   # Type: integer
   replicas: 1
 
-  # Port on which EDI listens income traffic
+  # Port on which API listens income traffic
   # Type: integer
   port: 80
 
@@ -145,6 +145,10 @@ tracking_server:
     # To use specific value, replace ~ with target value
     # Type: string
     # tlsSecretName: ~
+
+    # Match the content of an incoming request before the load balancer directs traffic to the referenced Service.
+    # Type: string
+    path: /mlflow
 
 # Toolchain Integration entity configuration
 toolchain_integration:

@@ -115,28 +115,28 @@ pipeline {
                 stage("Build toolchain Docker image"){
                     steps {
                         script {
-                            cicdLibrary.buildLegionImage('odahuflow-mlflow-toolchain', '.', 'containers/mlflow-toolchain/Dockerfile')
+                            cicdLibrary.buildLegionImage('odahu-flow-mlflow-toolchain', '.', 'containers/mlflow-toolchain/Dockerfile')
                         }
                     }
                 }
                 stage("Build gpu toolchain Docker image"){
                     steps {
                         script {
-                            cicdLibrary.buildLegionImage('odahuflow-mlflow-toolchain-gpu', '.', 'containers/mlflow-toolchain-gpu/Dockerfile')
+                            cicdLibrary.buildLegionImage('odahu-flow-mlflow-toolchain-gpu', '.', 'containers/mlflow-toolchain-gpu/Dockerfile')
                         }
                     }
                 }
                 stage('Build tracking-server Docker image') {
                     steps {
                         script {
-                            cicdLibrary.buildLegionImage('odahuflow-mlflow-tracking-server', '.', 'containers/mlflow-tracking-server/Dockerfile')
+                            cicdLibrary.buildLegionImage('odahu-flow-mlflow-tracking-server', '.', 'containers/mlflow-tracking-server/Dockerfile')
                         }
                     }
                 }
                 stage('Build resource-applier Docker image') {
                     steps {
                         script {
-                            cicdLibrary.buildLegionImage('odahuflow-trainer-resource-applier', '.', 'containers/resource-applier/Dockerfile')
+                            cicdLibrary.buildLegionImage('odahu-flow-trainer-resource-applier', '.', 'containers/resource-applier/Dockerfile')
                         }
                     }
                 }
@@ -161,28 +161,28 @@ pipeline {
                 stage("Upload toolchain Docker image"){
                     steps {
                         script {
-                            cicdLibrary.uploadDockerImage('odahuflow-mlflow-toolchain', env.param_stable_release.toBoolean() && env.param_dockerhub_publishing_enabled.toBoolean())
+                            cicdLibrary.uploadDockerImage('odahu-flow-mlflow-toolchain', env.param_stable_release.toBoolean() && env.param_dockerhub_publishing_enabled.toBoolean())
                         }
                     }
                 }
                 stage("Upload gpu toolchain Docker image"){
                     steps {
                         script {
-                            cicdLibrary.uploadDockerImage('odahuflow-mlflow-toolchain-gpu', env.param_stable_release.toBoolean() && env.param_dockerhub_publishing_enabled.toBoolean())
+                            cicdLibrary.uploadDockerImage('odahu-flow-mlflow-toolchain-gpu', env.param_stable_release.toBoolean() && env.param_dockerhub_publishing_enabled.toBoolean())
                         }
                     }
                 }
                 stage('Upload tracking-server Docker image') {
                     steps {
                         script {
-                            cicdLibrary.uploadDockerImage('odahuflow-mlflow-tracking-server', env.param_stable_release.toBoolean() && env.param_dockerhub_publishing_enabled.toBoolean())
+                            cicdLibrary.uploadDockerImage('odahu-flow-mlflow-tracking-server', env.param_stable_release.toBoolean() && env.param_dockerhub_publishing_enabled.toBoolean())
                         }
                     }
                 }
                 stage('Upload resource-applier Docker image') {
                     steps {
                         script {
-                            cicdLibrary.uploadDockerImage('odahuflow-trainer-resource-applier', env.param_stable_release.toBoolean() && env.param_dockerhub_publishing_enabled.toBoolean())
+                            cicdLibrary.uploadDockerImage('odahu-flow-trainer-resource-applier', env.param_stable_release.toBoolean() && env.param_dockerhub_publishing_enabled.toBoolean())
                         }
                     }
                 }

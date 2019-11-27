@@ -1,10 +1,10 @@
-name: odahuflow-mlflow
+name: odahu-flow-mlflow
 version: 0.0.1
 appVersion: 0.0.1
-description: MLFlow integration for odahuflow platform
+description: MLFlow integration for odahu-flow platform
 keywords:
 - ML
-- odahuflow
+- odahu-flow
 maintainers:
   - name: Dmitrii Suslov
     email: suslov.dimitriy@gmail.com
