@@ -19,10 +19,6 @@ docker-build-mlflow-tracking-server:
 docker-build-pipine-agent:
 	docker build -t odahu/pipine-agent:${TAG} -f containers/mlflow-pipine-agent/Dockerfile .
 
-## docker-build-resource-applier: Build resource applier docker image
-docker-build-resource-applier:
-	docker build -t odahu/odahu-flow-trainer-resource-applier:${TAG} -f containers/resource-applier/Dockerfile .
-
 ## install-mflow-runner: Start MLFLow server in Docker
 install-mflow-runner:
 	cd mlflow && \
