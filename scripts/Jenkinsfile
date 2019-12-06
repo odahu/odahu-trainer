@@ -14,54 +14,55 @@ pipeline {
             buildDiscarder(logRotator(numToKeepStr: '35', artifactNumToKeepStr: '35'))
     }
     environment {
-            /// Input parameters
-            //Enable docker cache parameter
-            param_enable_docker_cache = "${params.EnableDockerCache}"
-            //Build major version release and optionally push it to public repositories
-            param_stable_release = "${params.StableRelease}"
-            //Release version to tag all artifacts to
-            param_release_version = "${params.ReleaseVersion}"
-            //Git Branch to build package from
-            param_git_branch = "${params.GitBranch}"
-            //Legion cicd repo url (for pipeline methods import)
-            param_legion_cicd_repo = "${params.LegionCicdRepo}"
-            //Legion repo version tag (tag or branch name)
-            param_legion_cicd_branch = "${params.LegionCicdBranch}"
-            //Legion Infra repo url (for pipeline methods import)
-            param_legion_infra_repo = "${params.LegionInfraRepo}"
-            //Legion repo version tag (tag or branch name)
-            param_legion_infra_version_tag = "${params.LegionInfraVersionTag}"
-            //Push release git tag
-            param_push_git_tag = "${params.PushGitTag}"
-            //Rewrite git tag i exists
-            param_force_tag_push = "${params.ForceTagPush}"
-            //Push release to master bransh
-            param_update_master = "${params.UpdateMaster}"
-            //Set next releases version explicitly
-            param_next_version = "${params.NextVersion}"
-            // Update version string
-            param_update_version_string = "${params.UpdateVersionString}"
-            // Release version to be used as docker cache source
-            param_docker_cache_source = "${params.DockerCacheSource}"
-            //Artifacts storage parameters
-            param_helm_repo_git_url = "${params.HelmRepoGitUrl}"
-            param_helm_repo_git_branch = "${params.HelmRepoGitBranch}"
-            param_helm_repository = "${params.HelmRepository}"
-            param_docker_registry = "${params.DockerRegistry}"
-            param_docker_hub_registry = "${params.DockerHubRegistry}"
-            param_git_deploy_key = "${params.GitDeployKey}"
-            ///Job parameters
-            sharedLibPath = "legion-cicd/pipelines/legionPipeline.groovy"
-            pathToCharts= "${WORKSPACE}/helms"
+        /*
+        Job parameters
+        */
+        pathToCharts= "${WORKSPACE}/helms"
+        sharedLibPath = "legion-cicd/pipelines/legionPipeline.groovy"
+        //Git Branch to build package from
+        param_git_branch = "${params.GitBranch}"
 
-            // PyPi
-            param_pypi_public_url = "${params.PyPiPublicUrl}"
-            param_pypi_public_creds = "pypi_public_cred"
-            param_pypi_private_url = "${params.PyPiPrivateUrl}"
-            param_pypi_private_creds = "nexus-local-repository"
-            param_pypi_publishing_enabled = "${PyPiPublishingEnabled}"
+        /*
+        Release parameters
+        */
+        //Set next releases version explicitly
+        param_next_version = "${params.NextVersion}"
+        //Release version to tag all artifacts to
+        param_release_version = "${params.ReleaseVersion}"
+        //Push release git tag
+        param_push_git_tag = "${params.PushGitTag}"
+        //Rewrite git tag i exists
+        param_force_tag_push = "${params.ForceTagPush}"
+        param_update_version_string = "${params.UpdateVersionString}"
+        param_update_master = "${params.UpdateMaster}"
+        //Build major version release and optionally push it to public repositories
+        param_stable_release = "${params.StableRelease}"
 
-            param_dockerhub_publishing_enabled = "${params.DockerHubPublishingEnabled}"
+        /*
+        CICD repository
+        */
+        legionCicdGitlabKey = "${params.legionCicdGitlabKey}"
+        param_git_deploy_key = "${params.GitDeployKey}"
+        //Legion CICD repo url (for pipeline methods import)
+        param_legion_cicd_repo = "${params.LegionCicdRepo}"
+        //Legion repo branch (tag or branch name)
+        param_legion_cicd_branch = "${params.LegionCicdBranch}"
+
+        /*
+        Helm
+        */
+        param_helm_repo_git_url = "${params.HelmRepoGitUrl}"
+        param_helm_repo_git_branch = "${params.HelmRepoGitBranch}"
+        param_helm_repository = "${params.HelmRepository}"
+
+        /*
+        Docker
+        */
+        param_dockerhub_publishing_enabled = "${params.DockerHubPublishingEnabled}"
+        param_docker_registry = "${params.DockerRegistry}"
+        param_docker_hub_registry = "${params.DockerHubRegistry}"
+        param_enable_docker_cache = "${params.EnableDockerCache}"
+        param_docker_cache_source = "${params.DockerCacheSource}"
     }
 
     stages {
@@ -95,48 +96,26 @@ pipeline {
             }
         }
 
-        // Set Git Tag in case of stable release
-        stage('Set GIT release Tag'){
-            steps {
-                script {
-                    print (env.param_stable_release)
-                    if (env.param_stable_release.toBoolean() && env.param_push_git_tag.toBoolean()){
-                        cicdLibrary.setGitReleaseTag("${env.param_git_deploy_key}")
-                    }
-                    else {
-                        print("Skipping release git tag push")
-                    }
-                }
-            }
-        }
-
         stage("Build Docker images & Run Tests") {
             parallel {
                 stage("Build toolchain Docker image"){
                     steps {
                         script {
-                            cicdLibrary.buildLegionImage('odahu-flow-mlflow-toolchain', '.', 'containers/mlflow-toolchain/Dockerfile')
+                            cicdLibrary.buildDockerImage('odahu-flow-mlflow-toolchain', '.', 'containers/mlflow-toolchain/Dockerfile')
                         }
                     }
                 }
                 stage("Build gpu toolchain Docker image"){
                     steps {
                         script {
-                            cicdLibrary.buildLegionImage('odahu-flow-mlflow-toolchain-gpu', '.', 'containers/mlflow-toolchain-gpu/Dockerfile')
+                            cicdLibrary.buildDockerImage('odahu-flow-mlflow-toolchain-gpu', '.', 'containers/mlflow-toolchain-gpu/Dockerfile')
                         }
                     }
                 }
                 stage('Build tracking-server Docker image') {
                     steps {
                         script {
-                            cicdLibrary.buildLegionImage('odahu-flow-mlflow-tracking-server', '.', 'containers/mlflow-tracking-server/Dockerfile')
-                        }
-                    }
-                }
-                stage('Build resource-applier Docker image') {
-                    steps {
-                        script {
-                            cicdLibrary.buildLegionImage('odahu-flow-trainer-resource-applier', '.', 'containers/resource-applier/Dockerfile')
+                            cicdLibrary.buildDockerImage('odahu-flow-mlflow-tracking-server', '.', 'containers/mlflow-tracking-server/Dockerfile')
                         }
                     }
                 }
@@ -144,13 +123,6 @@ pipeline {
         }
         stage('Upload artifacts'){
             parallel {
-                stage("Upload PyPi Legion packages") {
-                    steps {
-                        script {
-                            cicdLibrary.publishPythonPackage("mlflow/", env.param_pypi_private_creds, env.param_pypi_private_url, env.param_pypi_publishing_enabled, env.param_pypi_public_creds, env.param_pypi_public_url)
-                        }
-                    }
-                }
                 stage('Package and upload helm charts') {
                     steps {
                         script {
@@ -179,38 +151,18 @@ pipeline {
                         }
                     }
                 }
-                stage('Upload resource-applier Docker image') {
-                    steps {
-                        script {
-                            cicdLibrary.uploadDockerImage('odahu-flow-trainer-resource-applier', env.param_stable_release.toBoolean() && env.param_dockerhub_publishing_enabled.toBoolean())
-                        }
-                    }
-                }
             }
         }
 
-        stage("Update Legion version string") {
+        stage("Update branch") {
             steps {
                 script {
-                    if (env.param_stable_release.toBoolean() && env.param_update_version_string.toBoolean()) {
-                        cicdLibrary.updateVersionString('mlflow/odahuflow/mlflowrunner/__version__.py')
-                    }
-                    else {
-                        print("Skipping version string update")
-                    }
-                }
-            }
-        }
-
-        stage('Update Master branch'){
-            steps {
-                script {
-                    if (env.param_update_master.toBoolean()){
-                        cicdLibrary.updateMasterBranch()
-                    }
-                    else {
-                        print("Skipping Master branch update")
-                    }
+                    cicdLibrary.updateReleaseBranches(
+                        env.param_stable_release.toBoolean(),
+                        env.param_push_git_tag.toBoolean(),
+                        env.param_update_version_string.toBoolean(),
+                        env.param_update_master.toBoolean(),
+                        env.param_git_deploy_key)
                 }
             }
         }

@@ -26,8 +26,6 @@ jobs:
         - make docker-build-mlflow-toolchain-gpu
     - script:
         - make docker-build-mlflow-tracking-server
-    - script:
-        - make docker-build-resource-applier
     - stage: lint
       before_script:
         - make install-mflow-runner

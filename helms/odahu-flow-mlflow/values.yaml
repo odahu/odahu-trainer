@@ -155,3 +155,9 @@ toolchain_integration:
   # Toolchain Integration might be disabled
   # Type: bool
   enabled: true
+
+# Odahuflow CLI
+odahuflowctl:
+  # This variable can be uncommented to setup custom image name
+  # Type: string
+  # image: custom-image:1.0
