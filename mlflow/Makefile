@@ -1,23 +1,22 @@
 SHELL := /bin/bash
 TAG=latest
 
+PIP_EXTRA_INDEX_URL=
+
+-include .env
 .EXPORT_ALL_VARIABLES:
 
 ## docker-build-mlflow-toolchain: Build MLFlow toolchain docker image
 docker-build-mlflow-toolchain:
-	docker build -t odahu/mlflow-toolchain:${TAG} -f containers/mlflow-toolchain/Dockerfile .
+	docker build --build-arg PIP_EXTRA_INDEX_URL=${PIP_EXTRA_INDEX_URL} -t odahu/mlflow-toolchain:${TAG} -f containers/mlflow-toolchain/Dockerfile .
 
 ## docker-build-mlflow-toolchain-gpu: Build MLFlow gpu toolchain docker image
 docker-build-mlflow-toolchain-gpu:
-	docker build -t odahu/mlflow-toolchain-gpu:${TAG} -f containers/mlflow-toolchain-gpu/Dockerfile .
+	docker build --build-arg PIP_EXTRA_INDEX_URL=${PIP_EXTRA_INDEX_URL} -t odahu/mlflow-toolchain-gpu:${TAG} -f containers/mlflow-toolchain-gpu/Dockerfile .
 
 ## docker-build-mlflow-tracking-server: Build MLFlow docker image
 docker-build-mlflow-tracking-server:
 	docker build -t odahu/mlflow-server:${TAG} -f containers/mlflow-tracking-server/Dockerfile .
-
-## docker-build-pipine-agent: Build pipeline agent docker image
-docker-build-pipine-agent:
-	docker build -t odahu/pipine-agent:${TAG} -f containers/mlflow-pipine-agent/Dockerfile .
 
 ## install-mflow-runner: Start MLFLow server in Docker
 install-mflow-runner:

@@ -63,6 +63,11 @@ pipeline {
         param_docker_hub_registry = "${params.DockerHubRegistry}"
         param_enable_docker_cache = "${params.EnableDockerCache}"
         param_docker_cache_source = "${params.DockerCacheSource}"
+
+        /*
+        PyPi
+        */
+        param_pypi_private_url = "${params.PyPiPrivateUrl}"
     }
 
     stages {
