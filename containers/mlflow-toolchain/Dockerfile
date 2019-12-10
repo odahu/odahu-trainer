@@ -38,8 +38,9 @@ RUN wget --quiet ${MINICONDA_URL}  -O ~/miniconda.sh && \
     echo "conda activate base" >> ~/.bashrc
 
 ARG ODAHUFLOW_DIR=/opt/odahu-flow
-RUN pip install --upgrade pip
+RUN pip install pip==19.3.1 setuptools==40.8.0
 
+ARG PIP_EXTRA_INDEX_URL
 COPY mlflow/ ${ODAHUFLOW_DIR}/
 RUN pip install -I -e ${ODAHUFLOW_DIR}
 
