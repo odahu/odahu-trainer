@@ -47,7 +47,7 @@ spec:
         env:
           - name: API_URL
             value: {{ .Values.apiUrl }}
-        image: "{{ include "odahuflow.image-name" (dict "root" . "service" .Values.tracking_server "tpl" "%sodahu-flow-cli:%s") }}"
+        image: "{{ include "odahuflow.image-name" (dict "root" . "service" .Values.odahuflowctl "tpl" "%sodahu-flow-cli:%s") }}"
         volumeMounts:
           - mountPath: /opt/odahu-flow
             name: resources
