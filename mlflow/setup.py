@@ -59,7 +59,7 @@ setup(
     install_requires=[
         # TODO: change to PyPi when we publish release
         'odahu-flow-sdk==1.0.0rc32',
-        'mlflow<=1.3.0,>=1.0.0',
+        'mlflow<=1.5.0,>=1.0.0',
         'PyYAML>=3.1.2'
     ],
     extras_require={
