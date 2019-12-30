@@ -31,9 +31,8 @@ import mlflow
 import mlflow.models
 import mlflow.projects
 import mlflow.pyfunc
-import mlflow.store.artifact_repository_registry
 import mlflow.tracking
-import mlflow.tracking.utils
+from mlflow.tracking import set_tracking_uri, get_tracking_uri, MlflowClient
 
 MODEL_SUBFOLDER = 'odahuflow_model'
 ODAHUFLOW_PROJECT_DESCRIPTION = 'odahuflow.project.yaml'
@@ -181,18 +180,18 @@ def train_models(model_training: ModelTraining) -> mlflow.projects.SubmittedRun:
     """
     logging.debug('Validating MLflow version')
     mlflow_version = parse_version(mlflow.__version__)
-    if mlflow_version < parse_version('1.0') or mlflow_version > parse_version('1.3'):
-        raise Exception(f'Unsupported version {mlflow_version}. Please use MLflow versions >= 1.0.* but =< 1.3.* ')
+    if mlflow_version < parse_version('1.0') or mlflow_version > parse_version('1.5'):
+        raise Exception(f'Unsupported version {mlflow_version}. Please use MLflow versions >= 1.0.* but =< 1.5.* ')
 
     logging.info('Getting of tracking URI')
-    tracking_uri = mlflow.tracking.utils.get_tracking_uri()
+    tracking_uri = get_tracking_uri()
     if not tracking_uri:
         raise ValueError('Can not get tracking URL')
     logging.info(f"Using MLflow client placed at {tracking_uri}")
 
     logging.info('Creating MLflow client, setting tracking URI')
-    mlflow.tracking.utils.set_tracking_uri(tracking_uri)
-    client = mlflow.tracking.MlflowClient(tracking_uri=tracking_uri)
+    set_tracking_uri(tracking_uri)
+    client = MlflowClient(tracking_uri=tracking_uri)
 
     # Registering of experiment on tracking server if it is not exist
     logging.info(f"Searching for experiment with name {model_training.spec.model.name}")

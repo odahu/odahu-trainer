@@ -16,7 +16,7 @@
 
 FROM ubuntu:18.04
 
-ARG MLFLOW_VERSION=1.3.0
+ARG MLFLOW_VERSION=1.5.0
 ARG MINICONDA_URL=https://repo.anaconda.com/miniconda/Miniconda3-4.5.11-Linux-x86_64.sh
 
 ENV LANG=C.UTF-8 LC_ALL=C.UTF-8
