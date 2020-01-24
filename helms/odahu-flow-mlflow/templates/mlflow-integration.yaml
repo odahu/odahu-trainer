@@ -20,7 +20,9 @@ data:
     spec:
       additionalEnvironments:
         MLFLOW_TRACKING_URI: http://mlflow.{{ .Release.Namespace }}.svc.cluster.local
-      defaultImage: "{{ include "odahuflow.image-name" (dict "root" . "service" .Values.tracking_server "tpl" "%sodahu-flow-mlflow-toolchain-gpu:%s") }}"
+        LD_LIBRARY_PATH: "/usr/local/nvidia/lib64:${LD_LIBRARY_PATH}"
+        PATH: "/usr/local/nvidia/bin:${PATH}"
+      defaultImage: "{{ include "odahuflow.image-name" (dict "root" . "service" .Values.tracking_server "tpl" "%sodahu-flow-mlflow-toolchain:%s") }}"
       entrypoint: /opt/conda/bin/odahu-flow-mlflow-runner
 ---
 apiVersion: batch/v1

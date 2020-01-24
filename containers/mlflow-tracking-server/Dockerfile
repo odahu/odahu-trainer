@@ -27,4 +27,3 @@ EXPOSE 5000
 
 ENTRYPOINT ["bash", "-c"]
 CMD ["mlflow server --backend-store-uri ${MLFLOW_RUNS_DIRECTORY} --host 0.0.0.0 -p 5000"]
-

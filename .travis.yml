@@ -23,8 +23,6 @@ jobs:
       script:
         - make docker-build-mlflow-toolchain
     - script:
-        - make docker-build-mlflow-toolchain-gpu
-    - script:
         - make docker-build-mlflow-tracking-server
     - stage: lint
       before_script:
