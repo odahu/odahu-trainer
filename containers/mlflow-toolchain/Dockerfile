@@ -17,31 +17,32 @@
 FROM ubuntu:18.04
 
 ARG MLFLOW_VERSION=1.5.0
-ARG MINICONDA_URL=https://repo.anaconda.com/miniconda/Miniconda3-4.5.11-Linux-x86_64.sh
+ARG MINICONDA_URL=https://repo.anaconda.com/miniconda/Miniconda3-4.7.12-Linux-x86_64.sh
+ARG ODAHUFLOW_DIR=/opt/odahu-flow
+ARG PIP_EXTRA_INDEX_URL
 
-ENV LANG=C.UTF-8 LC_ALL=C.UTF-8
-ENV PATH /opt/conda/bin:$PATH
+ENV LANG=C.UTF-8 LC_ALL=C.UTF-8 \
+    PATH="/usr/local/nvidia/bin:/opt/conda/bin:${PATH}" \
+    LD_LIBRARY_PATH="/usr/local/nvidia/lib64:${LD_LIBRARY_PATH}"
 
-# Install native dependencies
 RUN apt-get update --fix-missing && \
-    apt-get install -y wget bzip2 ca-certificates curl git && \
+    apt-get install -y wget bzip2 git && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 
 # Install conda
-RUN wget --quiet ${MINICONDA_URL}  -O ~/miniconda.sh && \
+RUN wget --quiet ${MINICONDA_URL} -O ~/miniconda.sh && \
     /bin/bash ~/miniconda.sh -b -p /opt/conda && \
     rm ~/miniconda.sh && \
-    /opt/conda/bin/conda clean -tipsy && \
+    conda clean -tipsy && \
     ln -s /opt/conda/etc/profile.d/conda.sh /etc/profile.d/conda.sh && \
     echo ". /opt/conda/etc/profile.d/conda.sh" >> ~/.bashrc && \
     echo "conda activate base" >> ~/.bashrc
 
-ARG ODAHUFLOW_DIR=/opt/odahu-flow
-RUN pip install pip==19.3.1 setuptools==40.8.0
-
-ARG PIP_EXTRA_INDEX_URL
 COPY mlflow/ ${ODAHUFLOW_DIR}/
-RUN pip install -I -e ${ODAHUFLOW_DIR}
+
+RUN . /opt/conda/etc/profile.d/conda.sh && \
+    conda activate base && \
+    pip install -I -e ${ODAHUFLOW_DIR}
 
 CMD [ "/bin/bash" ]

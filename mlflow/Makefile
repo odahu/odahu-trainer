@@ -10,10 +10,6 @@ PIP_EXTRA_INDEX_URL=
 docker-build-mlflow-toolchain:
 	docker build --build-arg PIP_EXTRA_INDEX_URL=${PIP_EXTRA_INDEX_URL} -t odahu/mlflow-toolchain:${TAG} -f containers/mlflow-toolchain/Dockerfile .
 
-## docker-build-mlflow-toolchain-gpu: Build MLFlow gpu toolchain docker image
-docker-build-mlflow-toolchain-gpu:
-	docker build --build-arg PIP_EXTRA_INDEX_URL=${PIP_EXTRA_INDEX_URL} -t odahu/mlflow-toolchain-gpu:${TAG} -f containers/mlflow-toolchain-gpu/Dockerfile .
-
 ## docker-build-mlflow-tracking-server: Build MLFlow docker image
 docker-build-mlflow-tracking-server:
 	docker build -t odahu/mlflow-server:${TAG} -f containers/mlflow-tracking-server/Dockerfile .
