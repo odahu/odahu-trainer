@@ -84,6 +84,10 @@ security:
     # Type: string
     cookieName: _oauth2_proxy
 
+
+  # If true – authentication inside cluster is enabled
+  mesh_authn: false
+
 # Tracking Server server configuration
 tracking_server:
   # Tracking Server might be disabled
@@ -161,3 +165,12 @@ odahuflowctl:
   # This variable can be uncommented to setup custom image name
   # Type: string
   # image: custom-image:1.0
+
+# Service account used to upload odahu resources via odahuflowctl
+resource_uploader_sa: {}
+#resource_uploader_sa:
+#  client_id: some-client-id
+#  client_secret: client-secret
+
+# OpenID provider url
+oauth_oidc_issuer_url: ""
