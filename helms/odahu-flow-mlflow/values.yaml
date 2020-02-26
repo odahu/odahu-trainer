@@ -98,6 +98,16 @@ tracking_server:
   # Type: string->string map
   annotations: {}
 
+  # Storage class for data volume
+  # Possible values:
+  #   - gp2 (EKS, GKE)
+  #   - default (AKS)
+  # Type: string
+  # storage_class: gp2
+
+  # Storage size, used only if storage_type is set
+  storage_size: 30Gi
+
   # This variable can be uncommented to setup custom image name for Tracking Server
   # Type: string
   # image: custom-image:1.0
