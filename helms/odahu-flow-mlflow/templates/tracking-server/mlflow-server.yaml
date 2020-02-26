@@ -1,17 +1,5 @@
 {{- if .Values.tracking_server.enabled -}}
-{{- if .Values.tracking_server.storage_class -}}
-apiVersion: v1
-kind: PersistentVolumeClaim
-metadata:
-  name: mlflow-pvc
-spec:
-  accessModes:
-    - ReadWriteOnce
-  storageClassName: {{ .Values.tracking_server.storage_class }}
-  resources:
-    requests:
-      storage: {{ .Values.tracking_server.storage_size }}
-{{- end }}
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -59,15 +47,17 @@ spec:
           timeoutSeconds: 8
           failureThreshold: 5
           periodSeconds: 10
-{{- if .Values.tracking_server.storage_class -}}
-        volumeDevices:
-          - name: mlflow-data
-            devicePath: /mlruns
+        {{- if .Values.tracking_server.storage_class }}
+        volumeMounts:
+          - mountPath: /mlruns
+            name: mlflow-data
+        {{- end }}
+      {{- if .Values.tracking_server.storage_class }}
       volumes:
         - name: mlflow-data
           persistentVolumeClaim:
-            pdName: mlflow-pvc
-{{- end }}
+            claimName: mlflow-pvc
+      {{- end }}
 ---
 apiVersion: v1
 kind: Service

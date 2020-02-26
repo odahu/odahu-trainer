@@ -1,0 +1,19 @@
+{{- if .Values.tracking_server.enabled -}}
+{{- if .Values.tracking_server.storage_class -}}
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: mlflow-pvc
+  namespace: odahu-flow
+spec:
+  accessModes:
+    - ReadWriteOnce
+  volumeMode: Filesystem
+  storageClassName: standard
+  storageClassName: {{ .Values.tracking_server.storage_class }}
+  resources:
+    requests:
+      storage: {{ .Values.tracking_server.storage_size | quote }}
+{{- end }}
+{{- end }}
