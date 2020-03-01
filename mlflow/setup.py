@@ -39,6 +39,9 @@ def extract_version() -> str:
             raise RuntimeError("Unable to find version string in %s." % (file_content,))
 
 
+with open('requirements.txt') as f:
+    requirements = f.read().splitlines()
+
 setup(
     name='odahu-flow-mlflow-runner',
     author='Vlad Tokarev, Vitalik Solodilov',
@@ -54,14 +57,12 @@ setup(
     data_files=[('', ["README.md"])],
     zip_safe=False,
     entry_points={
-        'console_scripts': ['odahu-flow-mlflow-runner=odahuflow.mlflowrunner.runner:main'],
+        'console_scripts': [
+            'odahu-flow-mlflow-runner=odahuflow.mlflowrunner.runner:main',
+            'odahu-flow-mlflow-wrapper=odahuflow.mlflowrunner.wrapper.wrapper:main'
+        ],
     },
-    install_requires=[
-        # TODO: change to PyPi when we publish release
-        'odahu-flow-sdk==1.0.0rc32',
-        'mlflow<=1.5.0,>=1.0.0',
-        'PyYAML>=3.1.2'
-    ],
+    install_requires=requirements,
     extras_require={
         'testing': [
             'pytest>=5.1.2',
