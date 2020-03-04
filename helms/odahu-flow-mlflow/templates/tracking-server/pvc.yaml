@@ -10,7 +10,7 @@ spec:
   accessModes:
     - ReadWriteOnce
   volumeMode: Filesystem
-  storageClassName: standard
+  persistentVolumeReclaimPolicy: Retain
   storageClassName: {{ .Values.tracking_server.storage_class }}
   resources:
     requests:
