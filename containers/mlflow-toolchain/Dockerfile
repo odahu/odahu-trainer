@@ -39,10 +39,19 @@ RUN wget --quiet ${MINICONDA_URL} -O ~/miniconda.sh && \
     echo ". /opt/conda/etc/profile.d/conda.sh" >> ~/.bashrc && \
     echo "conda activate base" >> ~/.bashrc
 
-COPY mlflow/ ${ODAHUFLOW_DIR}/
+# Create empty conda environemnt for a model dependencies
+ENV ODAHU_CONDA_ENV_NAME=odahu_model
+ENV PATH=/opt/conda/envs/${ODAHU_CONDA_ENV_NAME}/bin:$PATH
+RUN conda create --name ${ODAHU_CONDA_ENV_NAME} python --no-default-packages
 
+COPY mlflow/requirements.txt "${ODAHUFLOW_DIR}/"
 RUN . /opt/conda/etc/profile.d/conda.sh && \
     conda activate base && \
-    pip install -I -e ${ODAHUFLOW_DIR}
+    pip install -r "${ODAHUFLOW_DIR}/requirements.txt"
+
+COPY mlflow/ "${ODAHUFLOW_DIR}/"
+RUN . /opt/conda/etc/profile.d/conda.sh && \
+    conda activate base && \
+    pip install -e "${ODAHUFLOW_DIR}"
 
 CMD [ "/bin/bash" ]

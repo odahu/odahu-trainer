@@ -1,5 +1,5 @@
 #
-#    Copyright 2019 EPAM Systems
+#    Copyright 2020 EPAM Systems
 #
 #    Licensed under the Apache License, Version 2.0 (the "License");
 #    you may not use this file except in compliance with the License.
@@ -13,17 +13,8 @@
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
 #
+import typing
 
-FROM python:3.7.6
 
-ARG MLFLOW_VERSION=1.5.0
-ENV MLFLOW_RUNS_DIRECTORY=/mlruns
-
-RUN pip install --no-cache-dir mlflow==${MLFLOW_VERSION}
-
-RUN mkdir -p ${MLFLOW_RUNS_DIRECTORY}
-
-EXPOSE 5000
-
-ENTRYPOINT ["bash", "-c"]
-CMD ["mlflow server --backend-store-uri ${MLFLOW_RUNS_DIRECTORY} --host 0.0.0.0 -p 5000"]
+class MLFlowWrapperOutput(typing.NamedTuple):
+    run_id: str

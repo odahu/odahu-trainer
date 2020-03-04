@@ -23,10 +23,11 @@ import shutil
 import sys
 from urllib import parse
 
-import yaml
+from odahuflow.mlflowrunner.conda import update_model_conda_env, run_mlflow_wrapper
 from odahuflow.sdk.models import K8sTrainer
 from odahuflow.sdk.models import ModelTraining
-from pkg_resources import parse_version
+
+import yaml
 import mlflow
 import mlflow.models
 import mlflow.projects
@@ -34,9 +35,10 @@ import mlflow.pyfunc
 import mlflow.tracking
 from mlflow.tracking import set_tracking_uri, get_tracking_uri, MlflowClient
 
+
 MODEL_SUBFOLDER = 'odahuflow_model'
 ODAHUFLOW_PROJECT_DESCRIPTION = 'odahuflow.project.yaml'
-ENTRYPOINT = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'entrypoint.py')
+ENTRYPOINT = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'templates', 'entrypoint.py')
 
 
 def parse_model_training_entity(source_file: str) -> K8sTrainer:
@@ -77,13 +79,13 @@ def copytree(src, dst):
             shutil.copy2(s, d)
 
 
-def save_models(mlflow_run: mlflow.projects.SubmittedRun, model_training: ModelTraining, target_directory: str) -> None:
+def save_models(mlflow_run_id: str, model_training: ModelTraining, target_directory: str) -> None:
     """
     Save models after run
     """
     # Using internal API for getting store and artifacts location
     store = mlflow.tracking._get_store()
-    artifact_uri = store.get_run(mlflow_run.run_id).info.artifact_uri
+    artifact_uri = store.get_run(mlflow_run_id).info.artifact_uri
     logging.info(f"Artifacts location detected. Using store {store}")
 
     parsed_url = parse.urlparse(artifact_uri)
@@ -167,21 +169,19 @@ def save_models(mlflow_run: mlflow.projects.SubmittedRun, model_training: ModelT
             },
             'odahuflowVersion': '1.0',
             'output': {
-                'run_id': mlflow_run.run_id
+                'run_id': mlflow_run_id
             }
         }
 
         yaml.dump(data, proj_stream)
 
 
-def train_models(model_training: ModelTraining) -> mlflow.projects.SubmittedRun:
+def train_models(model_training: ModelTraining) -> str:
     """
     Start MLfLow run
     """
-    logging.debug('Validating MLflow version')
-    mlflow_version = parse_version(mlflow.__version__)
-    if mlflow_version < parse_version('1.0') or mlflow_version > parse_version('1.5'):
-        raise Exception(f'Unsupported version {mlflow_version}. Please use MLflow versions >= 1.0.* but =< 1.5.* ')
+    logging.info('Downloading conda dependencies')
+    update_model_conda_env(model_training)
 
     logging.info('Getting of tracking URI')
     tracking_uri = get_tracking_uri()
@@ -212,23 +212,27 @@ def train_models(model_training: ModelTraining) -> mlflow.projects.SubmittedRun:
                  f"entry point: {model_training.spec.entrypoint}, "
                  f"hyper parameters: {model_training.spec.hyper_parameters}, "
                  f"experiment id={experiment_id}]")
-    run = mlflow.projects.run(
-        uri=model_training.spec.work_dir,
-        entry_point=model_training.spec.entrypoint,
-        parameters=model_training.spec.hyper_parameters,
-        experiment_id=experiment_id,
-        backend='local',
-        synchronous=True
-    )
+
+    mlflow_input = {
+        "uri": model_training.spec.work_dir,
+        "entry_point": model_training.spec.entrypoint,
+        "parameters": model_training.spec.hyper_parameters,
+        "experiment_id": experiment_id,
+        "backend": 'local',
+        "synchronous": True,
+        "use_conda": False,
+    }
+
+    run_id = run_mlflow_wrapper(mlflow_input)
 
     # TODO: refactor
-    client.set_tag(run.run_id, "training_id", model_training.id)
-    client.set_tag(run.run_id, "model_name", model_training.spec.model.name)
-    client.set_tag(run.run_id, "model_version", model_training.spec.model.version)
+    client.set_tag(run_id, "training_id", model_training.id)
+    client.set_tag(run_id, "model_name", model_training.spec.model.name)
+    client.set_tag(run_id, "model_version", model_training.spec.model.version)
 
-    logging.info(f"MLflow's run function finished. Run ID: {run.run_id}")
+    logging.info(f"MLflow's run function finished. Run ID: {run_id}")
 
-    return run
+    return run_id
 
 
 def setup_logging(args: argparse.Namespace) -> None:
@@ -257,10 +261,10 @@ def main():
         model_training = parse_model_training_entity(args.mt_file)
 
         # Start MLflow training process
-        mlflow_run = train_models(model_training.model_training)
+        mlflow_run_id = train_models(model_training.model_training)
 
         # Save MLflow models as odahuflow artifact
-        save_models(mlflow_run, model_training.model_training, args.target)
+        save_models(mlflow_run_id, model_training.model_training, args.target)
     except Exception as e:
         error_message = f'Exception occurs during model training. Message: {e}'
 
