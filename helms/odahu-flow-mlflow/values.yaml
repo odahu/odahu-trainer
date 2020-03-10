@@ -100,7 +100,8 @@ tracking_server:
 
   # Storage class for data volume
   # Possible values:
-  #   - gp2 (EKS, GKE)
+  #   - stgandard (GKE)
+  #   - gp2 (EKS)
   #   - default (AKS)
   # Type: string
   # storage_class: gp2
