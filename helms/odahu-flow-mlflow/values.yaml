@@ -106,7 +106,7 @@ tracking_server:
   # storage_class: gp2
 
   # Storage size, used only if storage_type is set
-  storage_size: 30Gi
+  storage_size: 1Gi
 
   # This variable can be uncommented to setup custom image name for Tracking Server
   # Type: string
