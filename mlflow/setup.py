@@ -69,6 +69,7 @@ setup(
             'pytest-mock>=1.10.4',
             'pytest-cov>=2.7.1',
             'pylint>=2.3.0'
+            'cookiecutter==1.7.2'
         ]
     },
     version=extract_version()

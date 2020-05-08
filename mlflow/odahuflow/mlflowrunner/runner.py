@@ -21,20 +21,25 @@ import os
 import os.path
 import shutil
 import sys
+import tempfile
+from pathlib import Path
 from urllib import parse
 
-from odahuflow.mlflowrunner.conda import update_model_conda_env, run_mlflow_wrapper
-from odahuflow.sdk.models import K8sTrainer
-from odahuflow.sdk.models import ModelTraining
-
-import yaml
 import mlflow
 import mlflow.models
 import mlflow.projects
 import mlflow.pyfunc
 import mlflow.tracking
+import yaml
 from mlflow.tracking import set_tracking_uri, get_tracking_uri, MlflowClient
-
+from odahuflow.gppi.model.dependencies import Dependencies, CondaDependencies
+from odahuflow.gppi.model.meta import Meta, ToolchainMeta, ModelMeta
+from odahuflow.gppi.python.creator import PythonModelCreator
+from odahuflow.mlflowrunner.conda import update_model_conda_env, run_mlflow_wrapper
+from odahuflow.mlflowrunner.library import ModelLibraryInfo, ModelLibraryPackage, ModelLibraryEntrypoint, \
+    generate_model_library
+from odahuflow.sdk.models import K8sTrainer
+from odahuflow.sdk.models import ModelTraining
 
 MODEL_SUBFOLDER = 'odahuflow_model'
 ODAHUFLOW_PROJECT_DESCRIPTION = 'odahuflow.project.yaml'
@@ -125,55 +130,53 @@ def save_models(mlflow_run_id: str, model_training: ModelTraining, target_direct
 
     model = models[0]
     model_source_folder = os.path.join(artifact_uri, model)
-    mlflow_target_directory = os.path.join(target_directory, MODEL_SUBFOLDER)
 
-    logging.info(f"Copying MLflow model from {model_source_folder} to {mlflow_target_directory}")
-
-    logging.info('Preparing target directory')
-    if not os.path.exists(mlflow_target_directory):
-        os.makedirs(mlflow_target_directory)
-
-    copytree(model_source_folder, mlflow_target_directory)
-
-    model_obj = mlflow.models.Model.load(mlflow_target_directory)
+    model_obj = mlflow.models.Model.load(model_source_folder)
     py_flavor = model_obj.flavors[mlflow.pyfunc.FLAVOR_NAME]
 
     env = py_flavor.get('env')
-    if env:
-        dependencies = 'conda'
-        conda_path = os.path.join(MODEL_SUBFOLDER, env)
-        logging.info(f'Conda env located in {conda_path}')
-    else:
+    if not env:
         raise Exception('Unknown type of env - empty')
 
-    entrypoint_target = os.path.join(mlflow_target_directory, 'entrypoint.py')
-    shutil.copyfile(ENTRYPOINT, entrypoint_target)
+    conda_path = os.path.join(MODEL_SUBFOLDER, env)
+    logging.info(f'Conda env located in {conda_path}')
 
-    project_file_path = os.path.join(target_directory, ODAHUFLOW_PROJECT_DESCRIPTION)
-    with open(project_file_path, 'w') as proj_stream:
-        data = {
-            'binaries': {
-                'type': 'python',
-                'dependencies': dependencies,
-                'conda_path': conda_path
-            },
-            'model': {
-                'name': model_training.spec.model.name,
-                'version': model_training.spec.model.version,
-                'workDir': MODEL_SUBFOLDER,
-                'entrypoint': 'entrypoint'
-            },
-            'toolchain': {
-                'name': 'mlflow',
-                'version': mlflow.__version__
-            },
-            'odahuflowVersion': '1.0',
-            'output': {
-                'run_id': mlflow_run_id
-            }
-        }
+    meta = Meta(
+        toolchain=ToolchainMeta(
+            name='mlflow',
+            version=mlflow.__version__
+        ),
+        model=ModelMeta(
+            name=model_training.spec.model.name,
+            version=model_training.spec.model.version,
+        ),
+        output={
+            'run_id': mlflow_run_id
+        },
+        dependencies=Dependencies(
+            conda=CondaDependencies(
+                source_file_name=conda_path,
+            )
+        )
+    )
+    info = ModelLibraryInfo(
+        model_entrypoint_name="model-1-2-3",
+        entrypoint=ModelLibraryEntrypoint(dir="model"),
+        package=ModelLibraryPackage(),
+        binaries_path=Path(model_source_folder),
+    )
 
-        yaml.dump(data, proj_stream)
+    meta.dump_to_file(Path(model_source_folder))
+
+    with tempfile.TemporaryDirectory() as temp_dir_library_path:
+        temp_library_path = Path(temp_dir_library_path) / 'library.tar.gz'
+        generate_model_library(info, temp_library_path)
+
+        PythonModelCreator(
+            meta=meta,
+            output_artifact=Path(target_directory) / 'model.tar.gz',
+            library=temp_library_path,
+        ).create()
 
 
 def train_models(model_training: ModelTraining) -> str:
