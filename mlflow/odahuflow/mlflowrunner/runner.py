@@ -121,7 +121,7 @@ def save_models(mlflow_run_id: str, model_training: ModelTraining, target_direct
         raise Exception(f'Founded models: {models!r}. Only 1 model allowed')
 
     if not models:
-        raise Exception(f'Can not find any model')
+        raise Exception('Can not find any model')
 
     model = models[0]
     model_source_folder = os.path.join(artifact_uri, model)

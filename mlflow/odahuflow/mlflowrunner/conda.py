@@ -14,6 +14,7 @@
 #    limitations under the License.
 #
 import json
+import logging
 import os
 import shutil
 from os.path import join
@@ -29,6 +30,9 @@ MLFLOW_WRAPPER_INPUT_FILE_PATH = "mlflow-input.json"
 MLPROJECT_FILE_NAME = "mlproject"
 DEFAULT_CONDA_FILE_NAME = "conda.yaml"
 ODAHU_MODEL_CONDA_ENV_NAME = os.environ.get("ODAHU_CONDA_ENV_NAME", "odahu_model")
+
+
+logger = logging.getLogger(__name__)
 
 
 def _find_mlproject_file_path(model_training: ModelTraining) -> str:
@@ -54,6 +58,37 @@ def _extract_conda_file_name(mlproject_file_path: str) -> str:
         return ml_project.get("conda_env", DEFAULT_CONDA_FILE_NAME)
 
 
+def _get_conda_bin_executable(executable_name):
+    """
+    Return path to the specified executable, assumed to be discoverable within the 'bin'
+    subdirectory of a conda installation.
+    """
+    # Use CONDA_EXE as per https://github.com/conda/conda/issues/7126
+    if "CONDA_EXE" in os.environ:
+        conda_bin_dir = os.path.dirname(os.environ["CONDA_EXE"])
+        return os.path.join(conda_bin_dir, executable_name)
+    return executable_name
+
+
+def _get_conda_command(conda_env_name):
+    #  Checking for newer conda versions
+    if os.name != 'nt' and ('CONDA_EXE' in os.environ or 'MLFLOW_CONDA_HOME' in os.environ):
+        conda_path = _get_conda_bin_executable("conda")
+        activate_conda_env = [
+            'source {}/../etc/profile.d/conda.sh'.format(os.path.dirname(conda_path))
+        ]
+        activate_conda_env += ["conda activate {} 1>&2".format(conda_env_name)]
+    else:
+        activate_path = _get_conda_bin_executable("activate")
+        # in case os name is not 'nt', we are not running on windows. It introduces
+        # bash command otherwise.
+        if os.name != "nt":
+            return ["source %s %s 1>&2" % (activate_path, conda_env_name)]
+        else:
+            return ["conda activate %s" % (conda_env_name)]
+    return activate_conda_env
+
+
 def update_model_conda_env(model_training: ModelTraining):
     """
     Update model conda dependencies
@@ -75,12 +110,16 @@ def run_mlflow_wrapper(mlflow_input: Dict[str, Any]) -> str:
     with open(MLFLOW_WRAPPER_INPUT_FILE_PATH, 'w') as f:
         json.dump(mlflow_input, f)
 
-    io_proc_utils.run(
-        "conda", "run", "-n", ODAHU_MODEL_CONDA_ENV_NAME,
-        shutil.which('odahu-flow-mlflow-wrapper'),
-        "--input", MLFLOW_WRAPPER_INPUT_FILE_PATH,
-        "--output", MLFLOW_WRAPPER_OUTPUT_FILE_PATH,
-    )
+    sep = ' && '
+    args = _get_conda_command(ODAHU_MODEL_CONDA_ENV_NAME)
+    args += [f'{shutil.which("odahu-flow-mlflow-wrapper")} '
+             f'--input {MLFLOW_WRAPPER_INPUT_FILE_PATH} '
+             f'--output {MLFLOW_WRAPPER_OUTPUT_FILE_PATH}']
+    command = sep.join(args)
+
+    logger.info(f'Run command {command}')
+
+    io_proc_utils.run('bash', '-c', command)
 
     with open(MLFLOW_WRAPPER_OUTPUT_FILE_PATH) as f:
         return MLFlowWrapperOutput(**json.load(f)).run_id
