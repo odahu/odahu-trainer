@@ -72,5 +72,5 @@ def main():
     try:
         work(args.input, args.output)
     except Exception:
-        logging.exception(f'Exception occurs during model training')
+        logging.exception('Exception occurs during model training')
         sys.exit(2)
