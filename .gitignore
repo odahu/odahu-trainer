@@ -41,3 +41,5 @@ head_output.pkl
 *.pid
 
 out/
+
+.env
