@@ -16,7 +16,7 @@
 
 FROM python:3.7.6
 
-ARG MLFLOW_VERSION=1.5.0
+ARG MLFLOW_VERSION=1.11.0
 ENV MLFLOW_RUNS_DIRECTORY=/mlruns
 
 RUN pip install --no-cache-dir mlflow==${MLFLOW_VERSION}

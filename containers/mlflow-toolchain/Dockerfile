@@ -16,7 +16,7 @@
 
 FROM ubuntu:18.04
 
-ARG MLFLOW_VERSION=1.5.0
+ARG MLFLOW_VERSION=1.11.0
 ARG MINICONDA_URL=https://repo.anaconda.com/miniconda/Miniconda3-4.7.12-Linux-x86_64.sh
 ARG ODAHUFLOW_DIR=/opt/odahu-flow
 ARG PIP_EXTRA_INDEX_URL
