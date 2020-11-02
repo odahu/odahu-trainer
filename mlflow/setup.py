@@ -59,7 +59,8 @@ setup(
     entry_points={
         'console_scripts': [
             'odahu-flow-mlflow-runner=odahuflow.mlflowrunner.runner:main',
-            'odahu-flow-mlflow-wrapper=odahuflow.mlflowrunner.wrapper.wrapper:main'
+            'odahu-flow-mlflow-wrapper=odahuflow.mlflowrunner.wrapper.wrapper:main',
+            'odahu-flow-mlflow-gppi-converter=odahuflow.mlflowrunner.runner:mlflow_to_gppi_cli',
         ],
     },
     install_requires=requirements,
