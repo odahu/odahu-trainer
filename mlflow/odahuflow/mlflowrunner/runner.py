@@ -109,7 +109,12 @@ def load_pyfunc_model(path: str, none_on_failure=False) -> Optional[mlflow.model
     :param none_on_failure: return None instead of raising exception on failure
     :raises Exception: if provided path is not an MLFlow model
     """
-    mlflow_model = mlflow.models.Model.load(path)
+    try:
+        mlflow_model = mlflow.models.Model.load(path)
+    except Exception:
+        if none_on_failure:
+            return None
+        raise
 
     if mlflow.pyfunc.FLAVOR_NAME not in mlflow_model.flavors.keys():
         if none_on_failure:
