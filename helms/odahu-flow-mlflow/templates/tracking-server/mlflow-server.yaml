@@ -34,6 +34,10 @@ spec:
         env:
           - name: _MLFLOW_STATIC_PREFIX
             value: {{ .Values.tracking_server.ingress.path }}
+          - name: MLFLOW_BACKEND_STORE
+            value: {{ .Values.mlflow_backend_store}}
+          - name: MLFLOW_ARTIFACT_ROOT
+            value: {{ .Values.mlflow_artifact_root}}
         ports:
         - containerPort: 5000
           name: api

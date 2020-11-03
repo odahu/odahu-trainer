@@ -17,13 +17,14 @@
 FROM python:3.7.6
 
 ARG MLFLOW_VERSION=1.11.0
-ENV MLFLOW_RUNS_DIRECTORY=/mlruns
+ENV MLFLOW_ARTIFACT_ROOT=/mlruns 
+ENV MLFLOW_BACKEND_STORE=/mlruns
 
-RUN pip install --no-cache-dir mlflow==${MLFLOW_VERSION}
+RUN pip install --no-cache-dir mlflow==${MLFLOW_VERSION} psycopg2==2.8.6
 
-RUN mkdir -p ${MLFLOW_RUNS_DIRECTORY}
+RUN mkdir -p ${MLFLOW_ARTIFACT_ROOT}
 
 EXPOSE 5000
 
 ENTRYPOINT ["bash", "-c"]
-CMD ["mlflow server --backend-store-uri ${MLFLOW_RUNS_DIRECTORY} --host 0.0.0.0 -p 5000"]
+CMD ["mlflow server --backend-store-uri ${MLFLOW_BACKEND_STORE} --default-artifact-root ${MLFLOW_ARTIFACT_ROOT} --host 0.0.0.0 -p 5000"]
