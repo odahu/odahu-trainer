@@ -17,10 +17,11 @@
 FROM python:3.7.6
 
 ARG MLFLOW_VERSION=1.11.0
+ARG PSYCOPG2_VERSION=2.8.6
 ENV MLFLOW_ARTIFACT_ROOT=/mlruns 
 ENV MLFLOW_BACKEND_STORE=/mlruns
 
-RUN pip install --no-cache-dir mlflow==${MLFLOW_VERSION} psycopg2==2.8.6
+RUN pip install --no-cache-dir mlflow==${MLFLOW_VERSION} psycopg2==${PSYCOPG2_VERSION}
 
 RUN mkdir -p ${MLFLOW_ARTIFACT_ROOT}
 

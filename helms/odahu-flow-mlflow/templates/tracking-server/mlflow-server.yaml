@@ -50,6 +50,16 @@ spec:
           timeoutSeconds: 8
           failureThreshold: 5
           periodSeconds: 10
+      initContainers:
+      - name: update-db-schema
+        image: "{{ include "odahuflow.image-name" (dict "root" . "service" .Values.tracking_server "tpl" "%sodahu-flow-mlflow-tracking-server:%s") }}"
+        resources:
+          {{- toYaml .Values.tracking_server.resources | nindent 10 }}
+        env:
+          - name: MLFLOW_BACKEND_STORE
+            value: {{ .Values.mlflow_backend_store}}
+        command: ["mlflow"]
+        args: ["db", "upgrade", "$(MLFLOW_BACKEND_STORE)"]
 ---
 apiVersion: v1
 kind: Service
