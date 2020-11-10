@@ -14,7 +14,9 @@
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
 #
+import contextlib
 import os.path
+import tarfile
 from urllib import parse
 
 import argparse
@@ -254,6 +256,15 @@ def setup_logging(args: argparse.Namespace) -> None:
                         level=log_level)
 
 
+@contextlib.contextmanager
+def _remember_cwd():
+    curdir = os.getcwd()
+    try:
+        yield
+    finally:
+        os.chdir(curdir)
+
+
 def mlflow_to_gppi_cli():
     parser = argparse.ArgumentParser()
 
@@ -270,14 +281,23 @@ def mlflow_to_gppi_cli():
                         help='Path to source MLFlow model directory')
     parser.add_argument('--gppi-model-path', '--gppi', required=True,
                         type=dir_type, help='Path to result GPPI model directory')
+    parser.add_argument('--zip', required=False, default=True,
+                        type=bool, help='Make tar arhieve with gppi folder')
 
     args = parser.parse_args()
     setup_logging(args)
-
+    gppi_model_path: str = args.gppi_model_path
     try:
         mlflow_to_gppi(model_meta=ModelIdentity(name=args.model_name, version=args.model_version),
                        mlflow_model_path=args.mlflow_model_path,
-                       gppi_model_path=args.gppi_model_path)
+                       gppi_model_path=gppi_model_path)
+
+        if args.zip:
+            with _remember_cwd(), tarfile.open(f'{gppi_model_path}.zip', 'w:gz') as tar:  # type: tarfile.TarFile
+                os.chdir(args.gppi_model_path)
+                for s in os.listdir('.'):
+                    tar.add(s)
+
     except Exception as e:
         error_message = f'Exception occurs during model conversion. Message: {e}'
 
