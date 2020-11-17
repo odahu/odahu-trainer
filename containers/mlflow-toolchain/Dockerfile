@@ -48,11 +48,11 @@ COPY mlflow/requirements.txt "${ODAHUFLOW_DIR}/"
 RUN . /opt/conda/etc/profile.d/conda.sh && \
     conda activate base && \
     pip install --upgrade pip setuptools wheel && \
-    pip install -r "${ODAHUFLOW_DIR}/requirements.txt"
+    pip install --use-feature=2020-resolver -r "${ODAHUFLOW_DIR}/requirements.txt"
 
 COPY mlflow/ "${ODAHUFLOW_DIR}/"
 RUN . /opt/conda/etc/profile.d/conda.sh && \
     conda activate base && \
-    pip install -e "${ODAHUFLOW_DIR}"
+    pip install --use-feature=2020-resolver  -e "${ODAHUFLOW_DIR}"
 
 CMD [ "/bin/bash" ]

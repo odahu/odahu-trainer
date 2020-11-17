@@ -1,4 +1,4 @@
-odahu-flow-sdk==1.0.2
-odahu-flow-cli==1.0.2
+odahu-flow-sdk==1.3.0
+odahu-flow-cli==1.3.0
 mlflow<=1.5.0,>=1.0.0
 PyYAML>=3.1.2
