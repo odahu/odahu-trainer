@@ -16,7 +16,6 @@
 
 FROM ubuntu:18.04
 
-ARG MLFLOW_VERSION=1.11.0
 ARG MINICONDA_URL=https://repo.anaconda.com/miniconda/Miniconda3-4.7.12-Linux-x86_64.sh
 ARG ODAHUFLOW_DIR=/opt/odahu-flow
 ARG PIP_EXTRA_INDEX_URL
@@ -48,11 +47,11 @@ COPY mlflow/requirements.txt "${ODAHUFLOW_DIR}/"
 RUN . /opt/conda/etc/profile.d/conda.sh && \
     conda activate base && \
     pip install --upgrade pip setuptools wheel && \
-    pip install -r "${ODAHUFLOW_DIR}/requirements.txt"
+    pip install --use-feature=2020-resolver -r "${ODAHUFLOW_DIR}/requirements.txt"
 
 COPY mlflow/ "${ODAHUFLOW_DIR}/"
 RUN . /opt/conda/etc/profile.d/conda.sh && \
     conda activate base && \
-    pip install -e "${ODAHUFLOW_DIR}"
+    pip install --use-feature=2020-resolver  -e "${ODAHUFLOW_DIR}"
 
 CMD [ "/bin/bash" ]
