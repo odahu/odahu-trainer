@@ -34,6 +34,10 @@ spec:
         env:
           - name: _MLFLOW_STATIC_PREFIX
             value: {{ .Values.tracking_server.ingress.path }}
+          - name: MLFLOW_BACKEND_STORE
+            value: {{ .Values.mlflow_backend_store}}
+          - name: MLFLOW_ARTIFACT_ROOT
+            value: {{ .Values.mlflow_artifact_root}}
         ports:
         - containerPort: 5000
           name: api
@@ -46,6 +50,17 @@ spec:
           timeoutSeconds: 8
           failureThreshold: 5
           periodSeconds: 10
+      initContainers:
+      - name: update-db-schema
+        image: "{{ include "odahuflow.image-name" (dict "root" . "service" .Values.tracking_server "tpl" "%sodahu-flow-mlflow-tracking-server:%s") }}"
+        resources:
+          {{- toYaml .Values.tracking_server.resources | nindent 10 }}
+        env:
+          - name: MLFLOW_BACKEND_STORE
+            value: {{ .Values.mlflow_backend_store}}
+        command: ["bash"]
+        # exit code of container is masked as WA due to #2113 issue of mlflow
+        args: ["-c", "mlflow db upgrade $(MLFLOW_BACKEND_STORE) ; exit 0"]
 ---
 apiVersion: v1
 kind: Service
