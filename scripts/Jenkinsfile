@@ -67,7 +67,11 @@ pipeline {
         /*
         PyPi
         */
+        param_pypi_public_url = "${params.PyPiPublicUrl}"
+        param_pypi_public_creds = "pypi_public_cred"
         param_pypi_private_url = "${params.PyPiPrivateUrl}"
+        param_pypi_private_creds = "nexus-local-repository"
+        param_pypi_publishing_enabled = "${PyPiPublishingEnabled}"
     }
 
     stages {
@@ -119,6 +123,13 @@ pipeline {
         }
         stage('Upload artifacts'){
             parallel {
+                stage("Publish PyPi packages") {
+                    steps {
+                        script {
+                            cicdLibrary.publishPythonPackage("mlflow", env.param_pypi_private_creds, env.param_pypi_private_url, env.param_pypi_publishing_enabled, env.param_pypi_public_creds, env.param_pypi_public_url)
+                        }
+                    }
+                }
                 stage('Package and upload helm charts') {
                     steps {
                         script {
