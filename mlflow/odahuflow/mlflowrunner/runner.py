@@ -14,29 +14,29 @@
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
 #
-import contextlib
-import os.path
-from urllib import parse
-
 import argparse
+import contextlib
 import json
 import logging
+import os
+import os.path
+import shutil
+import tarfile
+from typing import Optional
+from urllib import parse
+
 import mlflow
 import mlflow.models
 import mlflow.projects
 import mlflow.pyfunc
 import mlflow.tracking
-import os
-import shutil
 import sys
-import tarfile
 import yaml
 from mlflow.tracking import set_tracking_uri, get_tracking_uri, MlflowClient
 from odahuflow.sdk.gppi.models import OdahuflowProjectManifest, OdahuflowProjectManifestBinaries, \
     OdahuflowProjectManifestModel, OdahuflowProjectManifestToolchain
 from odahuflow.sdk.models import K8sTrainer, ModelIdentity
 from odahuflow.sdk.models import ModelTraining
-from typing import Optional
 
 from odahuflow.mlflowrunner.conda import update_model_conda_env, run_mlflow_wrapper
 
