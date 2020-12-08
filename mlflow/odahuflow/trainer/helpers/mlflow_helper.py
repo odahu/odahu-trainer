@@ -16,7 +16,6 @@
 #
 import contextlib
 import os.path
-import tarfile
 from urllib import parse
 
 import argparse
@@ -42,6 +41,7 @@ from mlflow.tracking import MlflowClient, get_tracking_uri, set_tracking_uri
 import os
 import shutil
 import sys
+import tarfile
 import yaml
 from mlflow.tracking import set_tracking_uri, get_tracking_uri, MlflowClient
 from odahuflow.sdk.gppi.models import OdahuflowProjectManifest, OdahuflowProjectManifestBinaries, \
@@ -134,7 +134,7 @@ def mlflow_to_gppi(model_meta: ModelIdentity, mlflow_model_path: str, gppi_model
     try:
         mlflow_model = load_pyfunc_model(mlflow_model_path)
     except Exception as load_exception:
-        raise ValueError(f"{mlflow_model_path} is not a MLflow model: {load_exception}")
+        raise ValueError(f"{mlflow_model_path} is not a MLflow model: {load_exception}") from load_exception
 
     mlflow_target_directory = os.path.join(gppi_model_path, MODEL_SUBFOLDER)
 
