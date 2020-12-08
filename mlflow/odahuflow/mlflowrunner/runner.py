@@ -16,7 +16,6 @@
 #
 import contextlib
 import os.path
-import tarfile
 from urllib import parse
 
 import argparse
@@ -30,6 +29,7 @@ import mlflow.tracking
 import os
 import shutil
 import sys
+import tarfile
 import yaml
 from mlflow.tracking import set_tracking_uri, get_tracking_uri, MlflowClient
 from odahuflow.sdk.gppi.models import OdahuflowProjectManifest, OdahuflowProjectManifestBinaries, \
@@ -65,7 +65,7 @@ def parse_model_training_entity(source_file: str) -> K8sTrainer:
             try:
                 mt = yaml.safe_load(mt)
             except json.JSONDecodeError as decode_error:
-                raise ValueError(f'Cannot decode ModelTraining resource file: {decode_error}')
+                raise ValueError(f'Cannot decode ModelTraining resource file: {decode_error}') from decode_error
 
     return K8sTrainer.from_dict(mt)
 
@@ -134,7 +134,7 @@ def mlflow_to_gppi(model_meta: ModelIdentity, mlflow_model_path: str, gppi_model
     try:
         mlflow_model = load_pyfunc_model(mlflow_model_path)
     except Exception as load_exception:
-        raise ValueError(f"{mlflow_model_path} is not a MLflow model: {load_exception}")
+        raise ValueError(f"{mlflow_model_path} is not a MLflow model: {load_exception}") from load_exception
 
     mlflow_target_directory = os.path.join(gppi_model_path, MODEL_SUBFOLDER)
 
