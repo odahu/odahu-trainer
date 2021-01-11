@@ -96,7 +96,7 @@ pipeline {
                     }
 
                     verFiles = [
-                            "mlflow/odahuflow/mlflowrunner/__version__.py",
+                            "mlflow/version.py",
                     ]
                     cicdLibrary.setBuildMeta(verFiles)
                 }
