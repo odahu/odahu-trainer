@@ -1,44 +1,25 @@
-#!/usr/bin/env python3
-#
-#    Copyright 2019 EPAM Systems
-#
-#    Licensed under the Apache License, Version 2.0 (the "License");
-#    you may not use this file except in compliance with the License.
-#    You may obtain a copy of the License at
-#
-#       http://www.apache.org/licenses/LICENSE-2.0
-#
-#    Unless required by applicable law or agreed to in writing, software
-#    distributed under the License is distributed on an "AS IS" BASIS,
-#    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-#    See the License for the specific language governing permissions and
-#    limitations under the License.
-#
-import argparse
 import json
-import logging
 import os
-import os.path
 import shutil
-import sys
 from urllib import parse
 
-from odahuflow.mlflowrunner.conda import update_model_conda_env, run_mlflow_wrapper
-from odahuflow.sdk.models import K8sTrainer
-from odahuflow.sdk.models import ModelTraining
+import logging
 
-import yaml
 import mlflow
 import mlflow.models
 import mlflow.projects
 import mlflow.pyfunc
 import mlflow.tracking
 from mlflow.tracking import set_tracking_uri, get_tracking_uri, MlflowClient
-
+import yaml
+from odahuflow.sdk.models import K8sTrainer, ModelTraining
+from odahuflow.trainer.helpers.conda import run_mlflow_wrapper, update_model_conda_env
+from odahuflow.trainer.helpers.fs import copytree
 
 MODEL_SUBFOLDER = 'odahuflow_model'
 ODAHUFLOW_PROJECT_DESCRIPTION = 'odahuflow.project.yaml'
 ENTRYPOINT = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'templates', 'entrypoint.py')
+
 
 
 def parse_model_training_entity(source_file: str) -> K8sTrainer:
@@ -64,19 +45,6 @@ def parse_model_training_entity(source_file: str) -> K8sTrainer:
                 raise ValueError(f'Cannot decode ModelTraining resource file: {decode_error}')
 
     return K8sTrainer.from_dict(mt)
-
-
-def copytree(src, dst):
-    """
-    Copy file tree from <src> location to <dst> location
-    """
-    for item in os.listdir(src):
-        s = os.path.join(src, item)
-        d = os.path.join(dst, item)
-        if os.path.isdir(s):
-            shutil.copytree(s, d)
-        else:
-            shutil.copy2(s, d)
 
 
 def save_models(mlflow_run_id: str, model_training: ModelTraining, target_directory: str) -> None:
@@ -233,48 +201,3 @@ def train_models(model_training: ModelTraining) -> str:
     logging.info(f"MLflow's run function finished. Run ID: {run_id}")
 
     return run_id
-
-
-def setup_logging(args: argparse.Namespace) -> None:
-    """
-    Setup logging instance
-    """
-    log_level = logging.DEBUG if args.verbose else logging.INFO
-
-    logging.basicConfig(format='[odahuflow][%(levelname)5s] %(asctime)s - %(message)s', datefmt='%d-%b-%y %H:%M:%S',
-                        level=log_level)
-
-
-def main():
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--verbose", action='store_true', help="more extensive logging")
-    parser.add_argument("--mt-file", '--mt', type=str, required=True,
-                        help="json/yaml file with a mode training resource")
-    parser.add_argument("--target", type=str, default='mlflow_output',
-                        help="directory where result model will be saved")
-    args = parser.parse_args()
-
-    # Setup logging
-    setup_logging(args)
-    try:
-        # Parse ModelTraining entity
-        model_training = parse_model_training_entity(args.mt_file)
-
-        # Start MLflow training process
-        mlflow_run_id = train_models(model_training.model_training)
-
-        # Save MLflow models as odahuflow artifact
-        save_models(mlflow_run_id, model_training.model_training, args.target)
-    except Exception as e:
-        error_message = f'Exception occurs during model training. Message: {e}'
-
-        if args.verbose:
-            logging.exception(error_message)
-        else:
-            logging.error(error_message)
-
-        sys.exit(2)
-
-
-if __name__ == '__main__':
-    main()

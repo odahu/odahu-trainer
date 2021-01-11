@@ -21,7 +21,7 @@ from os.path import join
 from typing import Any, Dict
 
 import yaml
-from odahuflow.mlflowrunner.wrapper.entities import MLFlowWrapperOutput
+from odahuflow.trainer.helpers.wrapper.entities import MLFlowWrapperOutput
 from odahuflow.sdk import io_proc_utils
 from odahuflow.sdk.models import ModelTraining
 

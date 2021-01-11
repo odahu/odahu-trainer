@@ -20,7 +20,7 @@ import re
 from setuptools import setup, find_namespace_packages
 
 PACKAGE_ROOT_PATH = os.path.dirname(os.path.abspath(__file__))
-VERSION_FILE = os.path.join(PACKAGE_ROOT_PATH, 'odahuflow', 'mlflowrunner', '__version__.py')
+VERSION_FILE = os.path.join(PACKAGE_ROOT_PATH, 'version.py')
 
 
 def extract_version() -> str:
@@ -58,8 +58,9 @@ setup(
     zip_safe=False,
     entry_points={
         'console_scripts': [
-            'odahu-flow-mlflow-runner=odahuflow.mlflowrunner.runner:main',
-            'odahu-flow-mlflow-wrapper=odahuflow.mlflowrunner.wrapper.wrapper:main'
+            'odahu-flow-mlflow-runner=odahuflow.trainer.mlflow_full.runner:main',
+            'odahu-flow-mlflow-project-runner=odahuflow.trainer.mlflow_projects.runner:main',
+            'odahu-flow-mlflow-wrapper=odahuflow.trainer.helpers.wrapper.wrapper:main'
         ],
     },
     install_requires=requirements,

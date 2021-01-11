@@ -24,7 +24,7 @@ import logging
 import sys
 from typing import Any, Dict
 
-from odahuflow.mlflowrunner.wrapper.entities import MLFlowWrapperOutput
+from odahuflow.trainer.helpers.wrapper.entities import MLFlowWrapperOutput
 from pkg_resources import parse_version
 import mlflow
 import mlflow.models
