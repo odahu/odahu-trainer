@@ -12,6 +12,7 @@ import mlflow.pyfunc
 import mlflow.tracking
 from mlflow.tracking import set_tracking_uri, get_tracking_uri, MlflowClient
 import yaml
+from odahuflow.sdk.gppi.executor import GPPITrainedModelBinary
 from odahuflow.sdk.models import K8sTrainer, ModelTraining
 from odahuflow.trainer.helpers.conda import run_mlflow_wrapper, update_model_conda_env
 from odahuflow.trainer.helpers.fs import copytree
@@ -142,6 +143,11 @@ def save_models(mlflow_run_id: str, model_training: ModelTraining, target_direct
         }
 
         yaml.dump(data, proj_stream)
+
+    logging.info("GPPI stored. Start to GPPI validation")
+    mb = GPPITrainedModelBinary(target_directory)
+    mb.self_check()
+    logging.info("GPPI is validated. OK")
 
 
 def train_models(model_training: ModelTraining) -> str:
