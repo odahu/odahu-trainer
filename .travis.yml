@@ -20,9 +20,11 @@ jobs:
         - make test-mflow-runner
         - odahu-flow-mlflow-runner -h
     - stage: docker builds
+      before_script:
+        - echo "$DOCKERHUB_TOKEN" | docker login -u "$DOCKERHUB_USER" --password-stdin
       script:
         - make docker-build-mlflow-toolchain
-    - script:
+      script:
         - make docker-build-mlflow-tracking-server
     - stage: lint
       before_script:
