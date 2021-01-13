@@ -16,7 +16,9 @@
 import argparse
 import logging
 import os
+import shutil
 import sys
+import tempfile
 
 import yaml
 from odahuflow.sdk.models import ModelTraining
@@ -50,8 +52,9 @@ def main():
     # Setup logging
     setup_logging(args)
 
-    output_dir = os.environ.get(OUTPUT_DIR, "/output")
+    output_dir = os.environ[OUTPUT_DIR] = tempfile.mkdtemp()
     logging.debug(f"output dir: {output_dir}")
+
 
     try:
         # Parse ModelTraining entity
@@ -69,6 +72,9 @@ def main():
 
         # copy output to target folder
         copytree(output_dir, args.target)
+
+        # rm temp directory
+        shutil.rmtree(output_dir)
 
     except Exception as e:
         error_message = f'Exception occurs during model training. Message: {e}'
