@@ -1,21 +1,22 @@
 import json
+import logging
 import os
 import shutil
 from urllib import parse
 
-import logging
 
+import yaml
+
+from odahuflow.sdk.gppi.executor import GPPITrainedModelBinary
+from odahuflow.sdk.models import K8sTrainer, ModelTraining
+from odahuflow.trainer.helpers.conda import run_mlflow_wrapper, update_model_conda_env
+from odahuflow.trainer.helpers.fs import copytree
 import mlflow
 import mlflow.models
 import mlflow.projects
 import mlflow.pyfunc
 import mlflow.tracking
-from mlflow.tracking import set_tracking_uri, get_tracking_uri, MlflowClient
-import yaml
-from odahuflow.sdk.gppi.executor import GPPITrainedModelBinary
-from odahuflow.sdk.models import K8sTrainer, ModelTraining
-from odahuflow.trainer.helpers.conda import run_mlflow_wrapper, update_model_conda_env
-from odahuflow.trainer.helpers.fs import copytree
+from mlflow.tracking import MlflowClient, get_tracking_uri, set_tracking_uri
 
 MODEL_SUBFOLDER = 'odahuflow_model'
 ODAHUFLOW_PROJECT_DESCRIPTION = 'odahuflow.project.yaml'
@@ -43,7 +44,7 @@ def parse_model_training_entity(source_file: str) -> K8sTrainer:
             try:
                 mt = yaml.safe_load(mt)
             except json.JSONDecodeError as decode_error:
-                raise ValueError(f'Cannot decode ModelTraining resource file: {decode_error}')
+                raise ValueError(f'Cannot decode ModelTraining resource file: {decode_error}') from decode_error
 
     return K8sTrainer.from_dict(mt)
 
