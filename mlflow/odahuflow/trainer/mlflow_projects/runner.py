@@ -71,6 +71,9 @@ def main():
         create_project_file(model_training.model_training, project_file_path)
 
         # copy output to target folder
+        logging.info('Preparing target directory')
+        if not os.path.exists(args.target):
+            os.makedirs(args.target)
         copytree(output_dir, args.target)
 
         # rm temp directory
