@@ -30,12 +30,15 @@ OUTPUT_DIR = "ODAHUFLOW_OUTPUT_DIR"
 ODAHUFLOW_PROJECT_DESCRIPTION = "odahuflow.project.yaml"
 
 
-def create_project_file(model_training: ModelTraining, project_file_path: str):
+def create_project_file(model_training: ModelTraining, project_file_path: str, mlflow_run_id: str):
 
     with open(project_file_path, 'w') as proj_stream:
         data = {
             'name': model_training.spec.model.name,
             'version': model_training.spec.model.version,
+            'output': {
+                'run_id': mlflow_run_id
+            }
         }
         yaml.dump(data, proj_stream)
 
@@ -61,14 +64,14 @@ def main():
         model_training = parse_model_training_entity(args.mt_file)
 
         # Start MLflow training process
-        _ = train_models(model_training.model_training)
+        mlflow_run_id = train_models(model_training.model_training)
 
         # Copy $WORKDIR/data folder to output destination
         copytree(os.path.join(model_training.model_training.spec.work_dir, "data"), output_dir)
 
         # Create model name/version file
         project_file_path = os.path.join(output_dir, ODAHUFLOW_PROJECT_DESCRIPTION)
-        create_project_file(model_training.model_training, project_file_path)
+        create_project_file(model_training.model_training, project_file_path, mlflow_run_id)
 
         # copy output to target folder
         logging.info('Preparing target directory')
