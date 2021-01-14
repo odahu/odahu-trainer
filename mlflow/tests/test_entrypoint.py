@@ -1,6 +1,6 @@
 import numpy as np
 import pandas as pd
-from odahuflow.mlflowrunner.templates.entrypoint import _extract_df_properties
+from odahuflow.trainer.helpers.templates.entrypoint import _extract_df_properties
 
 
 def test_extract_df_properties():

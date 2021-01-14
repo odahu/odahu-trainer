@@ -22,6 +22,14 @@ data:
         MLFLOW_TRACKING_URI: http://mlflow.{{ .Release.Namespace }}.svc.cluster.local
       defaultImage: "{{ include "odahuflow.image-name" (dict "root" . "service" .Values.tracking_server "tpl" "%sodahu-flow-mlflow-toolchain:%s") }}"
       entrypoint: /opt/conda/bin/odahu-flow-mlflow-runner
+    ---
+    kind: ToolchainIntegration
+    id: mlflow-project
+    spec:
+      additionalEnvironments:
+        MLFLOW_TRACKING_URI: http://mlflow.{{ .Release.Namespace }}.svc.cluster.local
+      defaultImage: "{{ include "odahuflow.image-name" (dict "root" . "service" .Values.tracking_server "tpl" "%sodahu-flow-mlflow-toolchain:%s") }}"
+      entrypoint: /opt/conda/bin/odahu-flow-mlflow-project-runner
 ---
 apiVersion: batch/v1
 kind: Job
