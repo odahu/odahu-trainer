@@ -27,7 +27,7 @@ from odahuflow.trainer.helpers.fs import copytree
 from odahuflow.trainer.helpers.mlflow_helper import parse_model_training_entity, train_models
 
 OUTPUT_DIR = "ODAHUFLOW_OUTPUT_DIR"
-ODAHUFLOW_PROJECT_DESCRIPTION = "odahuflow.model.yaml"
+ODAHUFLOW_PROJECT_DESCRIPTION = "odahuflow.project.yaml"
 
 
 def create_project_file(model_training: ModelTraining, project_file_path: str):
