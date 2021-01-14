@@ -1,21 +1,70 @@
 version: 2.1
 
-orbs:
-  python: circleci/python@0.2.1
-
 jobs:
-  build-and-test:
-    executor: python/default
+  security-check:
+    docker:
+      - image: cimg/base:2020.01
     steps:
       - checkout
-      - python/load-cache
-      - python/install-deps
-      - python/save-cache
       - run:
-          command: ./manage.py test
+          name: Setup
+          command: sudo make install-vulnerabilities-checker
+      - run:
+          name: Check
+          command: make check-vulnerabilities
+  test:
+    docker:
+      - image: circleci/python:3.6
+    steps:
+      - checkout
+      - run:
+          name: Setup
+          command: |
+            make install-mflow-runner
+            make install-mflow-runner-tests
+      - run:
+          name: Lint
+          command: |
+            make lint-mflow-runner
+  test:
+    docker:
+      - image: circleci/python:3.6
+    steps:
+      - checkout
+      - run:
+          name: Setup
+          command: |
+            make install-mflow-runner
+            make install-mflow-runner-tests
+      - run:
           name: Test
+          command: |
+            make test-mflow-runner
+            odahu-flow-mlflow-runner -h
+  build:
+    machine:
+      image: ubuntu-2004:202010-01
+    steps:
+      - checkout
+      - run:
+          name: Build
+          command: |
+            make docker-build-mlflow-toolchain
+            make docker-build-mlflow-tracking-server
 
 workflows:
-  main:
+  build_and_test:
     jobs:
-      - build-and-test
+      - security-check
+      - lint
+          requires:
+            - security-check
+      - test
+          requires:
+            - lint
+      - build
+          context:
+            - hub.docker.com
+          requires:
+            - test
+
