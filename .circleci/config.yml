@@ -12,7 +12,7 @@ jobs:
       - run:
           name: Check
           command: make check-vulnerabilities
-  test:
+  lint-n-test:
     docker:
       - image: circleci/python:3.6
     steps:
@@ -26,16 +26,6 @@ jobs:
           name: Lint
           command: |
             make lint-mflow-runner
-  test:
-    docker:
-      - image: circleci/python:3.6
-    steps:
-      - checkout
-      - run:
-          name: Setup
-          command: |
-            make install-mflow-runner
-            make install-mflow-runner-tests
       - run:
           name: Test
           command: |
@@ -53,18 +43,15 @@ jobs:
             make docker-build-mlflow-tracking-server
 
 workflows:
-  build_and_test:
+  main:
     jobs:
       - security-check
-      - lint
+      - lint-n-test
           requires:
             - security-check
-      - test
-          requires:
-            - lint
       - build
           context:
             - hub.docker.com
           requires:
-            - test
+            - lint-n-test
 
