@@ -54,4 +54,3 @@ workflows:
             - hub.docker.com
           requires:
             - lint-n-test
-
