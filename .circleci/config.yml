@@ -46,10 +46,10 @@ workflows:
   main:
     jobs:
       - security-check
-      - lint-n-test
+      - lint-n-test:
           requires:
             - security-check
-      - build
+      - build:
           context:
             - hub.docker.com
           requires:
