@@ -67,7 +67,11 @@ def main():
         mlflow_run_id = train_models(model_training.model_training)
 
         # Copy $WORKDIR/data folder to output destination
-        copytree(os.path.join(model_training.model_training.spec.work_dir, "data"), output_dir)
+        static_artifacts = os.path.join(model_training.model_training.spec.work_dir, "data")
+        if os.path.exists(static_artifacts):
+            copytree(os.path.join(model_training.model_training.spec.work_dir, "data"), output_dir)
+        else:
+            logging.info(f'Static artifacts folder: {static_artifacts} folder is empty')
 
         # Create model name/version file
         project_file_path = os.path.join(output_dir, ODAHUFLOW_PROJECT_DESCRIPTION)

@@ -43,19 +43,16 @@ def _find_mlproject_file_path(model_training: ModelTraining) -> str:
         if filename.lower() == MLPROJECT_FILE_NAME:
             return join(work_dir, filename)
 
-    raise ValueError(f"Can't find a conda dependencies file in the '{work_dir}' dir")
+    raise ValueError(f"Can't find a MLProject file in the '{work_dir}' dir")
 
 
-def _extract_conda_file_name(mlproject_file_path: str) -> str:
+def _extract_conda_file_name(ml_project: dict) -> str:
     """
     Extract conda dependencies file name from MLProject file
     :param mlproject_file_path: MLFlow MLProject file path
     :return: conda file name
     """
-    with open(mlproject_file_path) as f:
-        ml_project = yaml.load(f)
-
-        return ml_project.get("conda_env", DEFAULT_CONDA_FILE_NAME)
+    return ml_project.get("conda_env", DEFAULT_CONDA_FILE_NAME)
 
 
 def _get_conda_bin_executable(executable_name):
@@ -94,9 +91,30 @@ def update_model_conda_env(model_training: ModelTraining):
     Update model conda dependencies
     :param model_training:
     """
+
+    mlproject_file_path = _find_mlproject_file_path(model_training)
+    with open(mlproject_file_path) as f:
+        ml_project = yaml.load(f)
+
+    conda_env_configured_explicitly = ml_project.get("conda_env") is not None
+
+    default_conda_full_path = os.path.join(
+        os.getcwd(), model_training.spec.work_dir, DEFAULT_CONDA_FILE_NAME
+    )
+    default_file_exists = os.path.exists(default_conda_full_path)
+
+    if not conda_env_configured_explicitly and not default_file_exists:
+        logger.info(
+            f"Conda file is not configured explicitly. "
+            f"Default file {DEFAULT_CONDA_FILE_NAME} does not exists. "
+            f"Skip updating conda environment for training. "
+            f"Conda environment name: ODAHU_MODEL_CONDA_ENV_NAME={ODAHU_MODEL_CONDA_ENV_NAME}"
+        )
+        return
+
     io_proc_utils.run(
         "conda", "env", "update", "-n", ODAHU_MODEL_CONDA_ENV_NAME,
-        "-f", _extract_conda_file_name(_find_mlproject_file_path(model_training)),
+        "-f", _extract_conda_file_name(ml_project),
         cwd=os.path.join(os.getcwd(), model_training.spec.work_dir)
     )
 
