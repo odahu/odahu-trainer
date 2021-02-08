@@ -26,11 +26,6 @@ import tarfile
 from typing import Optional
 from urllib import parse
 
-import mlflow
-import mlflow.models
-import mlflow.projects
-import mlflow.pyfunc
-import mlflow.tracking
 import yaml
 from mlflow.tracking import set_tracking_uri, get_tracking_uri, MlflowClient
 from odahuflow.sdk.gppi.executor import GPPITrainedModelBinary
@@ -41,6 +36,12 @@ from odahuflow.sdk.models import ModelTraining
 
 from odahuflow.trainer.helpers.conda import run_mlflow_wrapper, update_model_conda_env
 from odahuflow.trainer.helpers.fs import copytree
+
+import mlflow
+import mlflow.models
+import mlflow.projects
+import mlflow.pyfunc
+import mlflow.tracking
 
 MODEL_SUBFOLDER = 'odahuflow_model'
 ODAHUFLOW_PROJECT_DESCRIPTION = 'odahuflow.project.yaml'
