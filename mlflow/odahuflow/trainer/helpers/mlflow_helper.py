@@ -21,38 +21,26 @@ import logging
 import os
 import os.path
 import shutil
+import sys
 import tarfile
 from typing import Optional
 from urllib import parse
 
-import os
-import shutil
-from urllib import parse
-
-
-import yaml
-
-from odahuflow.sdk.gppi.executor import GPPITrainedModelBinary
-from odahuflow.sdk.models import K8sTrainer, ModelTraining
-from odahuflow.trainer.helpers.conda import run_mlflow_wrapper, update_model_conda_env
-from odahuflow.trainer.helpers.fs import copytree
 import mlflow
 import mlflow.models
 import mlflow.projects
 import mlflow.pyfunc
 import mlflow.tracking
-from mlflow.tracking import MlflowClient, get_tracking_uri, set_tracking_uri
-import os
-import shutil
-import sys
 import yaml
 from mlflow.tracking import set_tracking_uri, get_tracking_uri, MlflowClient
+from odahuflow.sdk.gppi.executor import GPPITrainedModelBinary
 from odahuflow.sdk.gppi.models import OdahuflowProjectManifest, OdahuflowProjectManifestBinaries, \
     OdahuflowProjectManifestModel, OdahuflowProjectManifestToolchain
 from odahuflow.sdk.models import K8sTrainer, ModelIdentity
 from odahuflow.sdk.models import ModelTraining
 
-from odahuflow.mlflowrunner.conda import update_model_conda_env, run_mlflow_wrapper
+from odahuflow.trainer.helpers.conda import run_mlflow_wrapper, update_model_conda_env
+from odahuflow.trainer.helpers.fs import copytree
 
 MODEL_SUBFOLDER = 'odahuflow_model'
 ODAHUFLOW_PROJECT_DESCRIPTION = 'odahuflow.project.yaml'
@@ -184,7 +172,7 @@ def mlflow_to_gppi(model_meta: ModelIdentity, mlflow_model_path: str, gppi_model
         yaml.dump(manifest.dict(), proj_stream)
 
     logging.info("GPPI stored. Start to GPPI validation")
-    mb = GPPITrainedModelBinary(target_directory)
+    mb = GPPITrainedModelBinary(gppi_model_path)
     mb.self_check()
     logging.info("GPPI is validated. OK")
 
