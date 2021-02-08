@@ -20,7 +20,7 @@ import re
 from setuptools import setup, find_namespace_packages
 
 PACKAGE_ROOT_PATH = os.path.dirname(os.path.abspath(__file__))
-VERSION_FILE = os.path.join(PACKAGE_ROOT_PATH, 'odahuflow', 'mlflowrunner', '__version__.py')
+VERSION_FILE = os.path.join(PACKAGE_ROOT_PATH, 'version.py')
 
 
 def extract_version() -> str:
