@@ -1,22 +1,47 @@
+#!/usr/bin/env python3
+#
+#    Copyright 2019 EPAM Systems
+#
+#    Licensed under the Apache License, Version 2.0 (the "License");
+#    you may not use this file except in compliance with the License.
+#    You may obtain a copy of the License at
+#
+#       http://www.apache.org/licenses/LICENSE-2.0
+#
+#    Unless required by applicable law or agreed to in writing, software
+#    distributed under the License is distributed on an "AS IS" BASIS,
+#    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#    See the License for the specific language governing permissions and
+#    limitations under the License.
+#
+import argparse
+import contextlib
 import json
 import logging
 import os
+import os.path
 import shutil
+import sys
+import tarfile
+from typing import Optional
 from urllib import parse
 
-
 import yaml
-
 from odahuflow.sdk.gppi.executor import GPPITrainedModelBinary
-from odahuflow.sdk.models import K8sTrainer, ModelTraining
+from odahuflow.sdk.gppi.models import OdahuflowProjectManifest, OdahuflowProjectManifestBinaries, \
+    OdahuflowProjectManifestModel, OdahuflowProjectManifestToolchain
+from odahuflow.sdk.models import K8sTrainer, ModelIdentity
+from odahuflow.sdk.models import ModelTraining
+
 from odahuflow.trainer.helpers.conda import run_mlflow_wrapper, update_model_conda_env
 from odahuflow.trainer.helpers.fs import copytree
+
 import mlflow
 import mlflow.models
 import mlflow.projects
 import mlflow.pyfunc
 import mlflow.tracking
-from mlflow.tracking import MlflowClient, get_tracking_uri, set_tracking_uri
+from mlflow.tracking import set_tracking_uri, get_tracking_uri, MlflowClient
 
 MODEL_SUBFOLDER = 'odahuflow_model'
 ODAHUFLOW_PROJECT_DESCRIPTION = 'odahuflow.project.yaml'
@@ -62,91 +87,93 @@ def save_models(mlflow_run_id: str, model_training: ModelTraining, target_direct
     if parsed_url.scheme and parsed_url.scheme != 'file':
         raise ValueError(f'Unsupported scheme of url: {parsed_url}')
 
-    artifact_uri = parsed_url.path
-
     logging.info(f"Analyzing directory {artifact_uri} for models")
-    models = []
-    for subpath in os.listdir(artifact_uri):
-        full_subpath = os.path.join(artifact_uri, subpath)
-        ml_model_location = os.path.join(full_subpath, 'MLmodel')
+    artifacts_abs_paths = map(lambda path: os.path.join(parsed_url.path, path), os.listdir(artifact_uri))
+    found_models = list(filter(lambda path: load_pyfunc_model(path, none_on_failure=True), artifacts_abs_paths))
 
-        if os.path.isdir(full_subpath) and os.path.exists(ml_model_location):
-            logging.debug(f"Analyzing {subpath} in {full_subpath}")
+    if len(found_models) != 1:
+        raise ValueError(f'Expected to find exactly 1 model, found {len(found_models)}')
 
-            try:
-                model = mlflow.models.Model.load(full_subpath)
+    mlflow_to_gppi(model_training.spec.model, found_models[0], target_directory)
 
-                flavors = model.flavors.keys()
-                logging.debug(f"{subpath} contains {flavors} flavours")
-                if mlflow.pyfunc.FLAVOR_NAME not in flavors:
-                    logging.debug(f"{flavors} does not has {mlflow.pyfunc.FLAVOR_NAME} flavor, skipping")
-                    continue
 
-                logging.info(f"Registering model {subpath}")
-                models.append(subpath)
-            except Exception as load_exception:
-                logging.debug(f"{full_subpath} is not a MLflow model: {load_exception}")
+def load_pyfunc_model(path: str, none_on_failure=False) -> Optional[mlflow.models.Model]:
+    """Loads Mlflow models with pyfunc flavor
+    :param none_on_failure: return None instead of raising exception on failure
+    :raises Exception: if provided path is not an MLFlow model
+    """
+    try:
+        mlflow_model = mlflow.models.Model.load(path)
+    except Exception:
+        if none_on_failure:
+            return None
+        raise
 
-    if len(models) > 1:
-        raise Exception(f'Founded models: {models!r}. Only 1 model allowed')
+    if mlflow.pyfunc.FLAVOR_NAME not in mlflow_model.flavors.keys():
+        if none_on_failure:
+            return None
+        raise ValueError(f"{path} does not has {mlflow.pyfunc.FLAVOR_NAME} flavor")
+    return mlflow_model
 
-    if not models:
-        raise Exception('Can not find any model')
 
-    model = models[0]
-    model_source_folder = os.path.join(artifact_uri, model)
-    mlflow_target_directory = os.path.join(target_directory, MODEL_SUBFOLDER)
+def mlflow_to_gppi(model_meta: ModelIdentity, mlflow_model_path: str, gppi_model_path: str):
+    """Wraps an MLFlow model with a GPPI interface
+    :param model_meta: container for model name and version
+    :param mlflow_model_path: path to MLFlow model
+    :param gppi_model_path: path to target GPPI directory
+    """
+    try:
+        mlflow_model = load_pyfunc_model(mlflow_model_path)
+    except Exception as load_exception:
+        raise ValueError(f"{mlflow_model_path} is not a MLflow model: {load_exception}") from load_exception
 
-    logging.info(f"Copying MLflow model from {model_source_folder} to {mlflow_target_directory}")
+    mlflow_target_directory = os.path.join(gppi_model_path, MODEL_SUBFOLDER)
 
-    logging.info('Preparing target directory')
+    logging.info(f"Copying MLflow model from {mlflow_model_path} to {mlflow_target_directory}")
+
     if not os.path.exists(mlflow_target_directory):
         os.makedirs(mlflow_target_directory)
+    copytree(mlflow_model_path, mlflow_target_directory)
 
-    copytree(model_source_folder, mlflow_target_directory)
-
-    model_obj = mlflow.models.Model.load(mlflow_target_directory)
-    py_flavor = model_obj.flavors[mlflow.pyfunc.FLAVOR_NAME]
+    py_flavor = mlflow_model.flavors[mlflow.pyfunc.FLAVOR_NAME]
 
     env = py_flavor.get('env')
-    if env:
-        dependencies = 'conda'
-        conda_path = os.path.join(MODEL_SUBFOLDER, env)
-        logging.info(f'Conda env located in {conda_path}')
-    else:
-        raise Exception('Unknown type of env - empty')
+    if not env:
+        raise ValueError('Unknown type of env - empty')
+
+    dependencies = 'conda'
+    conda_path = os.path.join(MODEL_SUBFOLDER, env)
+    logging.info(f'Conda env located in {conda_path}')
 
     entrypoint_target = os.path.join(mlflow_target_directory, 'entrypoint.py')
     shutil.copyfile(ENTRYPOINT, entrypoint_target)
 
-    project_file_path = os.path.join(target_directory, ODAHUFLOW_PROJECT_DESCRIPTION)
-    with open(project_file_path, 'w') as proj_stream:
-        data = {
-            'binaries': {
-                'type': 'python',
-                'dependencies': dependencies,
-                'conda_path': conda_path
-            },
-            'model': {
-                'name': model_training.spec.model.name,
-                'version': model_training.spec.model.version,
-                'workDir': MODEL_SUBFOLDER,
-                'entrypoint': 'entrypoint'
-            },
-            'toolchain': {
-                'name': 'mlflow',
-                'version': mlflow.__version__
-            },
-            'odahuflowVersion': '1.0',
-            'output': {
-                'run_id': mlflow_run_id
-            }
-        }
+    project_file_path = os.path.join(gppi_model_path, ODAHUFLOW_PROJECT_DESCRIPTION)
 
-        yaml.dump(data, proj_stream)
+    manifest = OdahuflowProjectManifest(
+        odahuflowVersion='1.0',
+        binaries=OdahuflowProjectManifestBinaries(
+            type='python',
+            dependencies=dependencies,
+            conda_path=conda_path
+        ),
+        model=OdahuflowProjectManifestModel(
+            name=model_meta.name,
+            version=model_meta.version,
+            workDir=MODEL_SUBFOLDER,
+            entrypoint='entrypoint'
+        ),
+        toolchain=OdahuflowProjectManifestToolchain(
+            name='mlflow',
+            version=mlflow.__version__
+        )
+    )
+
+    with open(project_file_path, 'w') as proj_stream:
+        yaml.dump(manifest.dict(), proj_stream)
 
     logging.info("GPPI stored. Start to GPPI validation")
-    mb = GPPITrainedModelBinary(target_directory)
+    mb = GPPITrainedModelBinary(gppi_model_path)
     mb.self_check()
     logging.info("GPPI is validated. OK")
 
@@ -208,3 +235,101 @@ def train_models(model_training: ModelTraining) -> str:
     logging.info(f"MLflow's run function finished. Run ID: {run_id}")
 
     return run_id
+
+
+def setup_logging(args: argparse.Namespace) -> None:
+    """
+    Setup logging instance
+    """
+    log_level = logging.DEBUG if args.verbose else logging.INFO
+
+    logging.basicConfig(format='[odahuflow][%(levelname)5s] %(asctime)s - %(message)s', datefmt='%d-%b-%y %H:%M:%S',
+                        level=log_level)
+
+
+@contextlib.contextmanager
+def _remember_cwd():
+    curdir = os.getcwd()
+    try:
+        yield
+    finally:
+        os.chdir(curdir)
+
+
+def mlflow_to_gppi_cli():
+    parser = argparse.ArgumentParser()
+
+    def dir_type(string):
+        os.makedirs(string, exist_ok=True)
+        if not os.path.isdir(string):
+            raise ValueError(f'{string} is not a valid directory path')
+        return string
+
+    parser.add_argument('--verbose', action='store_true', help='More extensive logging')
+    parser.add_argument('--model-name', type=str, required=True, help='Name of GPPI Model')
+    parser.add_argument('--model-version', type=str, required=True, help='Version of GPPI Model')
+    parser.add_argument('--mlflow-model-path', '--mlflow', required=True, type=dir_type,
+                        help='Path to source MLFlow model directory')
+    parser.add_argument('--gppi-model-path', '--gppi', required=True,
+                        type=dir_type, help='Path to result GPPI model directory')
+    parser.add_argument('--zip', required=False, default=True,
+                        type=bool, help='Make tar arhieve with gppi folder')
+
+    args = parser.parse_args()
+    setup_logging(args)
+    gppi_model_path: str = args.gppi_model_path
+    try:
+        mlflow_to_gppi(model_meta=ModelIdentity(name=args.model_name, version=args.model_version),
+                       mlflow_model_path=args.mlflow_model_path,
+                       gppi_model_path=gppi_model_path)
+
+        if args.zip:
+            with _remember_cwd(), tarfile.open(f'{gppi_model_path}.zip', 'w:gz') as tar:  # type: tarfile.TarFile
+                os.chdir(args.gppi_model_path)
+                for s in os.listdir('.'):
+                    tar.add(s)
+
+    except Exception as e:
+        error_message = f'Exception occurs during model conversion. Message: {e}'
+
+        if args.verbose:
+            logging.exception(error_message)
+        else:
+            logging.error(error_message)
+
+        sys.exit(1)
+
+
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--verbose", action='store_true', help="more extensive logging")
+    parser.add_argument("--mt-file", '--mt', type=str, required=True,
+                        help="json/yaml file with a mode training resource")
+    parser.add_argument("--target", type=str, default='mlflow_output',
+                        help="directory where result model will be saved")
+    args = parser.parse_args()
+
+    # Setup logging
+    setup_logging(args)
+    try:
+        # Parse ModelTraining entity
+        model_training = parse_model_training_entity(args.mt_file)
+
+        # Start MLflow training process
+        mlflow_run_id = train_models(model_training.model_training)
+
+        # Save MLflow models as odahuflow artifact
+        save_models(mlflow_run_id, model_training.model_training, args.target)
+    except Exception as e:
+        error_message = f'Exception occurs during model training. Message: {e}'
+
+        if args.verbose:
+            logging.exception(error_message)
+        else:
+            logging.error(error_message)
+
+        sys.exit(2)
+
+
+if __name__ == '__main__':
+    main()

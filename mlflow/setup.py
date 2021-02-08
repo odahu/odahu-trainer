@@ -60,7 +60,8 @@ setup(
         'console_scripts': [
             'odahu-flow-mlflow-runner=odahuflow.trainer.mlflow_full.runner:main',
             'odahu-flow-mlflow-project-runner=odahuflow.trainer.mlflow_projects.runner:main',
-            'odahu-flow-mlflow-wrapper=odahuflow.trainer.helpers.wrapper.wrapper:main'
+            'odahu-flow-mlflow-wrapper=odahuflow.trainer.helpers.wrapper.wrapper:main',
+            'odahu-flow-mlflow-gppi-converter=odahuflow.trainer.helpers.mlflow_helper:mlflow_to_gppi_cli',
         ],
     },
     install_requires=requirements,
