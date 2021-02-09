@@ -14,15 +14,16 @@
 #    limitations under the License.
 #
 import functools
-# MLFlow packages
-import mlflow.models
-import mlflow.pyfunc
+import os
+
 # Third-party modules (is provided by MLFlow)
 import numpy as np
-import os
 import pandas as pd
 import pandas.api.types as pdt
 from typing import Optional, List, Dict, Union, Any, Tuple, Type
+
+import mlflow.models
+import mlflow.pyfunc
 
 # Storage of loaded prediction function
 MODEL_FLAVOR = None
@@ -116,7 +117,7 @@ def predict_on_matrix(input_matrix: List[List[Any]], provided_columns_names: Opt
     if hasattr(result, 'columns'):
         result_columns = result.columns
 
-    if isinstance(result, pd.Series) or isinstance(result, pd.DataFrame):
+    if isinstance(result, (pd.Series, pd.DataFrame)):
         result = result.to_numpy()
 
     return result, tuple(result_columns)
