@@ -15,12 +15,11 @@
 #
 import functools
 import os
+from typing import Optional, List, Dict, Union, Any, Tuple, Type
 
-# Third-party modules (is provided by MLFlow)
 import numpy as np
 import pandas as pd
 import pandas.api.types as pdt
-from typing import Optional, List, Dict, Union, Any, Tuple, Type
 
 import mlflow.models
 import mlflow.pyfunc
