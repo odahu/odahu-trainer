@@ -86,9 +86,10 @@ def save_models(mlflow_run_id: str, model_training: ModelTraining, target_direct
     parsed_url = parse.urlparse(artifact_uri)
     if parsed_url.scheme and parsed_url.scheme != 'file':
         raise ValueError(f'Unsupported scheme of url: {parsed_url}')
+    artifacts_path = parsed_url.path
 
     logging.info(f"Analyzing directory {artifact_uri} for models")
-    artifacts_abs_paths = map(lambda path: os.path.join(parsed_url.path, path), os.listdir(artifact_uri))
+    artifacts_abs_paths = map(lambda path: os.path.join(artifacts_path, path), os.listdir(artifacts_path))
     found_models = list(filter(lambda path: load_pyfunc_model(path, none_on_failure=True), artifacts_abs_paths))
 
     if len(found_models) != 1:
