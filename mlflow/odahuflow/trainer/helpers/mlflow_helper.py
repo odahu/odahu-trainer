@@ -273,7 +273,7 @@ def mlflow_to_gppi_cli():
                         help='Path to source MLFlow model directory')
     parser.add_argument('--gppi-model-path', '--gppi', required=True,
                         type=dir_type, help='Path to result GPPI model directory')
-    parser.add_argument('--zip', required=False, default=True,
+    parser.add_argument('--tgz', required=False, default=True,
                         type=bool, help='Make tar arhieve with gppi folder')
 
     args = parser.parse_args()
@@ -289,7 +289,7 @@ def mlflow_to_gppi_cli():
                        gppi_model_path=gppi_model_path)
 
         if args.zip:
-            with _remember_cwd(), tarfile.open(f'{gppi_model_path}.zip', 'w:gz') as tar:  # type: tarfile.TarFile
+            with _remember_cwd(), tarfile.open(f'{gppi_model_path}.tgz', 'w:gz') as tar:  # type: tarfile.TarFile
                 os.chdir(args.gppi_model_path)
                 for s in os.listdir('.'):
                     tar.add(s)
