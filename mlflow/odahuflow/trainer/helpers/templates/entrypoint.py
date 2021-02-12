@@ -14,15 +14,13 @@
 #    limitations under the License.
 #
 import functools
-import json
 import os
 from typing import Optional, List, Dict, Union, Any, Tuple, Type
 
-# Third-party modules (is provided by MLFlow)
 import numpy as np
 import pandas as pd
 import pandas.api.types as pdt
-# MLFlow packages
+
 import mlflow.models
 import mlflow.pyfunc
 
@@ -69,18 +67,6 @@ def _type_to_open_api_format(t: Type) -> Tuple[Optional[str], Optional[Any]]:
     return None, None
 
 
-class NumpyEncoder(json.JSONEncoder):
-    """
-    Converts Numpy objects to Python's core objects
-    """
-
-    # pylint: disable=E0202
-    def default(self, o):
-        if isinstance(o, np.generic):
-            return o.item()
-        return json.JSONEncoder.default(self, o)
-
-
 def init() -> str:
     """
     Initialize model and return prediction type
@@ -97,13 +83,16 @@ def init() -> str:
 
 
 def predict_on_matrix(input_matrix: List[List[Any]], provided_columns_names: Optional[List[str]] = None) \
-        -> Tuple[List[List[Any]], Tuple[str, ...]]:
+        -> Tuple[
+           Union[List[List[Any]], np.ndarray],
+           Tuple[str, ...]
+        ]:
     """
     Make prediction on a Matrix of values
 
     :param input_matrix: data for prediction
     :param provided_columns_names: Name of columns for provided matrix
-    :return: result matrix and result column names
+    :return: result matrix as np.array[np.array[Any]] or as List[List[Any]] and result column names
     """
     if provided_columns_names:
         input_matrix = pd.DataFrame(input_matrix, columns=provided_columns_names)
@@ -116,7 +105,8 @@ def predict_on_matrix(input_matrix: List[List[Any]], provided_columns_names: Opt
     if provided_columns_names and input_sample is not None:
         input_matrix = input_matrix.reindex(columns=input_sample.columns)
 
-    result = MODEL_FLAVOR.predict(input_matrix)
+    py_func_output = Union[pd.DataFrame, pd.Series, np.ndarray, list]
+    result: py_func_output = MODEL_FLAVOR.predict(input_matrix)
 
     result_columns = []
     if output_sample is not None:
@@ -126,15 +116,10 @@ def predict_on_matrix(input_matrix: List[List[Any]], provided_columns_names: Opt
     if hasattr(result, 'columns'):
         result_columns = result.columns
 
-    # TODO: think about better approach
-    if isinstance(result, pd.DataFrame):
-        output_matrix = result.to_numpy().tolist()
-    elif isinstance(result, np.ndarray):
-        output_matrix = result.tolist()
-    else:
-        output_matrix = result
+    if isinstance(result, (pd.Series, pd.DataFrame)):
+        result = result.to_numpy()
 
-    return output_matrix, tuple(result_columns)
+    return result, tuple(result_columns)
 
 
 @functools.lru_cache()
@@ -194,12 +179,3 @@ def info() -> Tuple[List[Dict[str, Any]], List[Dict[str, Any]]]:
     output_sample = _output_df_sample()
 
     return _extract_df_properties(input_sample), _extract_df_properties(output_sample)
-
-
-def get_output_json_serializer() -> type:
-    """
-    Returns JSON serializer to be used in output
-
-    :return: JSON serializer
-    """
-    return NumpyEncoder
