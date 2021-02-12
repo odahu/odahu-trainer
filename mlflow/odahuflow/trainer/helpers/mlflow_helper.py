@@ -86,9 +86,10 @@ def save_models(mlflow_run_id: str, model_training: ModelTraining, target_direct
     parsed_url = parse.urlparse(artifact_uri)
     if parsed_url.scheme and parsed_url.scheme != 'file':
         raise ValueError(f'Unsupported scheme of url: {parsed_url}')
+    artifacts_path = parsed_url.path
 
     logging.info(f"Analyzing directory {artifact_uri} for models")
-    artifacts_abs_paths = map(lambda path: os.path.join(parsed_url.path, path), os.listdir(artifact_uri))
+    artifacts_abs_paths = map(lambda path: os.path.join(artifacts_path, path), os.listdir(artifacts_path))
     found_models = list(filter(lambda path: load_pyfunc_model(path, none_on_failure=True), artifacts_abs_paths))
 
     if len(found_models) != 1:
@@ -120,7 +121,7 @@ def mlflow_to_gppi(model_meta: ModelIdentity, mlflow_model_path: str, gppi_model
     """Wraps an MLFlow model with a GPPI interface
     :param model_meta: container for model name and version
     :param mlflow_model_path: path to MLFlow model
-    :param gppi_model_path: path to target GPPI directory
+    :param gppi_model_path: path to target GPPI directory, should be empty
     """
     try:
         mlflow_model = load_pyfunc_model(mlflow_model_path)
@@ -272,22 +273,27 @@ def mlflow_to_gppi_cli():
                         help='Path to source MLFlow model directory')
     parser.add_argument('--gppi-model-path', '--gppi', required=True,
                         type=dir_type, help='Path to result GPPI model directory')
-    parser.add_argument('--zip', required=False, default=True,
+    parser.add_argument('--tgz', required=False, default=True,
                         type=bool, help='Make tar arhieve with gppi folder')
 
     args = parser.parse_args()
     setup_logging(args)
     gppi_model_path: str = args.gppi_model_path
+
+    if os.path.exists(gppi_model_path) and len(os.listdir(gppi_model_path)) > 0:
+        logging.error("Result directory must be empty!")
+
     try:
-        mlflow_to_gppi(model_meta=ModelIdentity(name=args.model_name, version=args.model_version),
+        mlflow_to_gppi(model_meta=ModelIdentity(name=args.model_name.strip(), version=args.model_version.strip()),
                        mlflow_model_path=args.mlflow_model_path,
                        gppi_model_path=gppi_model_path)
 
         if args.zip:
-            with _remember_cwd(), tarfile.open(f'{gppi_model_path}.zip', 'w:gz') as tar:  # type: tarfile.TarFile
+            with _remember_cwd(), tarfile.open(f'{gppi_model_path}.tgz', 'w:gz') as tar:  # type: tarfile.TarFile
                 os.chdir(args.gppi_model_path)
                 for s in os.listdir('.'):
                     tar.add(s)
+            shutil.rmtree(gppi_model_path)
 
     except Exception as e:
         error_message = f'Exception occurs during model conversion. Message: {e}'
