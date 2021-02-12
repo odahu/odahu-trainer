@@ -121,7 +121,7 @@ def mlflow_to_gppi(model_meta: ModelIdentity, mlflow_model_path: str, gppi_model
     """Wraps an MLFlow model with a GPPI interface
     :param model_meta: container for model name and version
     :param mlflow_model_path: path to MLFlow model
-    :param gppi_model_path: path to target GPPI directory
+    :param gppi_model_path: path to target GPPI directory, should be empty
     """
     try:
         mlflow_model = load_pyfunc_model(mlflow_model_path)
@@ -279,8 +279,12 @@ def mlflow_to_gppi_cli():
     args = parser.parse_args()
     setup_logging(args)
     gppi_model_path: str = args.gppi_model_path
+
+    if os.path.exists(gppi_model_path) and len(os.listdir(gppi_model_path)) > 0:
+        logging.error("Result directory must be empty!")
+
     try:
-        mlflow_to_gppi(model_meta=ModelIdentity(name=args.model_name, version=args.model_version),
+        mlflow_to_gppi(model_meta=ModelIdentity(name=args.model_name.strip(), version=args.model_version.strip()),
                        mlflow_model_path=args.mlflow_model_path,
                        gppi_model_path=gppi_model_path)
 
@@ -289,6 +293,7 @@ def mlflow_to_gppi_cli():
                 os.chdir(args.gppi_model_path)
                 for s in os.listdir('.'):
                     tar.add(s)
+            shutil.rmtree(gppi_model_path)
 
     except Exception as e:
         error_message = f'Exception occurs during model conversion. Message: {e}'
