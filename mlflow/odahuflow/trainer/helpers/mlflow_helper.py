@@ -258,21 +258,27 @@ def _remember_cwd():
 
 
 def mlflow_to_gppi_cli():
-    parser = argparse.ArgumentParser()
 
-    def dir_type(string):
-        os.makedirs(string, exist_ok=True)
+    def make_dir(string):
+        try:
+            os.makedirs(string, exist_ok=True)
+        except FileExistsError as error:
+            raise ValueError(f'A file already exists with the same name: {string}\n'
+                             'Rename file or directory and try again.') from error
+
+    def validate_dir(string):
         if not os.path.isdir(string):
             raise ValueError(f'{string} is not a valid directory path')
-        return string
+
+    parser = argparse.ArgumentParser(description='Converts MLFLow model to GPPI.')
 
     parser.add_argument('--verbose', action='store_true', help='More extensive logging')
     parser.add_argument('--model-name', type=str, required=True, help='Name of GPPI Model')
     parser.add_argument('--model-version', type=str, required=True, help='Version of GPPI Model')
-    parser.add_argument('--mlflow-model-path', '--mlflow', required=True, type=dir_type,
-                        help='Path to source MLFlow model directory')
+    parser.add_argument('--mlflow-model-path', '--mlflow', required=True,
+                        type=str, help='Path to source MLFlow model directory')
     parser.add_argument('--gppi-model-path', '--gppi', required=True,
-                        type=dir_type, help='Path to result GPPI model directory')
+                        type=str, help='Path to result GPPI model directory')
     parser.add_argument('--tgz', dest='tgz', action='store_true', help='Make tar arhieve with gppi folder')
     parser.add_argument('--no-tgz', dest='tgz', action='store_false')
     parser.set_defaults(tgz=True)
@@ -281,7 +287,10 @@ def mlflow_to_gppi_cli():
     setup_logging(args)
     gppi_model_path: str = args.gppi_model_path
 
-    if os.path.exists(gppi_model_path) and len(os.listdir(gppi_model_path)) > 0:
+    validate_dir(args.mlflow_model_path)
+    make_dir(gppi_model_path)
+
+    if len(os.listdir(gppi_model_path)) > 0:
         logging.error("Result directory must be empty!")
 
     try:
