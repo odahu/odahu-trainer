@@ -279,9 +279,7 @@ def mlflow_to_gppi_cli():
                         type=str, help='Path to source MLFlow model directory')
     parser.add_argument('--gppi-model-path', '--gppi', required=True,
                         type=str, help='Path to result GPPI model directory')
-    parser.add_argument('--tgz', dest='tgz', action='store_true', help='Make tar arhieve with gppi folder')
-    parser.add_argument('--no-tgz', dest='tgz', action='store_false')
-    parser.set_defaults(tgz=True)
+    parser.add_argument('--no-tgz', dest='tgz', action='store_false', help='Prevent archiving result directory')
     args = parser.parse_args()
 
     setup_logging(args)
