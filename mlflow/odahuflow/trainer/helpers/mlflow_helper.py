@@ -173,7 +173,7 @@ def mlflow_to_gppi(model_meta: ModelIdentity, mlflow_model_path: str, gppi_model
     with open(project_file_path, 'w') as proj_stream:
         yaml.dump(manifest.dict(), proj_stream)
 
-    logging.info("GPPI stored. Start to GPPI validation")
+    logging.info("GPPI stored. Starting GPPI validation")
     mb = GPPITrainedModelBinary(gppi_model_path)
     mb.self_check()
     logging.info("GPPI is validated. OK")
@@ -258,29 +258,37 @@ def _remember_cwd():
 
 
 def mlflow_to_gppi_cli():
-    parser = argparse.ArgumentParser()
+
+    def make_dir(string):
+        try:
+            os.makedirs(string, exist_ok=True)
+        except FileExistsError as error:
+            raise ValueError(f'A file already exists with the same name: {string}\n'
+                             'Rename file or directory and try again.') from error
 
     def dir_type(string):
-        os.makedirs(string, exist_ok=True)
         if not os.path.isdir(string):
-            raise ValueError(f'{string} is not a valid directory path')
+            raise ValueError
         return string
+
+    parser = argparse.ArgumentParser(description='Converts MLFLow model to GPPI.')
 
     parser.add_argument('--verbose', action='store_true', help='More extensive logging')
     parser.add_argument('--model-name', type=str, required=True, help='Name of GPPI Model')
     parser.add_argument('--model-version', type=str, required=True, help='Version of GPPI Model')
-    parser.add_argument('--mlflow-model-path', '--mlflow', required=True, type=dir_type,
-                        help='Path to source MLFlow model directory')
+    parser.add_argument('--mlflow-model-path', '--mlflow', required=True,
+                        type=dir_type, help='Path to source MLFlow model directory')
     parser.add_argument('--gppi-model-path', '--gppi', required=True,
-                        type=dir_type, help='Path to result GPPI model directory')
-    parser.add_argument('--tgz', required=False, default=True,
-                        type=bool, help='Make tar arhieve with gppi folder')
-
+                        type=str, help='Path to result GPPI model directory')
+    parser.add_argument('--no-tgz', dest='tgz', action='store_false', help='Prevent archiving result directory')
     args = parser.parse_args()
+
     setup_logging(args)
     gppi_model_path: str = args.gppi_model_path
 
-    if os.path.exists(gppi_model_path) and len(os.listdir(gppi_model_path)) > 0:
+    make_dir(gppi_model_path)
+
+    if len(os.listdir(gppi_model_path)) > 0:
         logging.error("Result directory must be empty!")
 
     try:
@@ -288,7 +296,7 @@ def mlflow_to_gppi_cli():
                        mlflow_model_path=args.mlflow_model_path,
                        gppi_model_path=gppi_model_path)
 
-        if args.zip:
+        if args.tgz:
             with _remember_cwd(), tarfile.open(f'{gppi_model_path}.tgz', 'w:gz') as tar:  # type: tarfile.TarFile
                 os.chdir(args.gppi_model_path)
                 for s in os.listdir('.'):
