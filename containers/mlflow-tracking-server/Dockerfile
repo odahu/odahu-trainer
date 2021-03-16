@@ -14,7 +14,7 @@
 #    limitations under the License.
 #
 
-FROM python:3.7.6
+FROM python:3.7.10-stretch
 
 ARG MLFLOW_VERSION=1.12.0
 ARG PSYCOPG2_VERSION=2.8.6
