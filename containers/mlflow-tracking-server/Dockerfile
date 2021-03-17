@@ -14,14 +14,23 @@
 #    limitations under the License.
 #
 
-FROM python:3.7.10-stretch
+FROM ubuntu:20.04
 
 ARG MLFLOW_VERSION=1.12.0
 ARG PSYCOPG2_VERSION=2.8.6
-ENV MLFLOW_ARTIFACT_ROOT=/mlruns 
+
+ENV LANG=C.UTF-8 LC_ALL=C.UTF-8
+ENV MLFLOW_ARTIFACT_ROOT=/mlruns
 ENV MLFLOW_BACKEND_STORE=/mlruns
 
-RUN pip install --no-cache-dir mlflow==${MLFLOW_VERSION} psycopg2==${PSYCOPG2_VERSION}
+RUN apt-get update --fix-missing && \
+    apt-get install -y gcc curl python3 python3-pip && \
+    apt-get clean autoclean && \
+    apt-get autoremove --yes && \
+    rm -rf /var/lib/{apt,dpkg,cache,log} && \
+    curl https://sh.rustup.rs -sSf > rustup-init.sh && \
+    sh rustup-init.sh -y && \
+    pip3 install --no-cache-dir mlflow==${MLFLOW_VERSION} psycopg2-binary==${PSYCOPG2_VERSION}
 
 RUN mkdir -p ${MLFLOW_ARTIFACT_ROOT}
 
