@@ -83,16 +83,13 @@ def init() -> str:
 
 
 def predict_on_matrix(input_matrix: List[List[Any]], provided_columns_names: Optional[List[str]] = None) \
-        -> Tuple[
-           Union[List[List[Any]], np.ndarray],
-           Tuple[str, ...]
-        ]:
+        -> Tuple[np.ndarray, Tuple[str, ...]]:
     """
     Make prediction on a Matrix of values
 
     :param input_matrix: data for prediction
     :param provided_columns_names: Name of columns for provided matrix
-    :return: result matrix as np.array[np.array[Any]] or as List[List[Any]] and result column names
+    :return: result matrix as np.array[np.array[Any]] and result column names
     """
     if provided_columns_names:
         input_matrix = pd.DataFrame(input_matrix, columns=provided_columns_names)
@@ -118,6 +115,9 @@ def predict_on_matrix(input_matrix: List[List[Any]], provided_columns_names: Opt
 
     if isinstance(result, (pd.Series, pd.DataFrame)):
         result = result.to_numpy()
+
+    if isinstance(result, list):
+        result = np.array(result)
 
     return result, tuple(result_columns)
 
