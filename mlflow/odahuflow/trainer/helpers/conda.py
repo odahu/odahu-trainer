@@ -98,9 +98,9 @@ def update_model_conda_env(model_training: ModelTraining):
 
     conda_env_configured_explicitly = ml_project.get("conda_env") is not None
 
-    default_conda_full_path = os.path.join(
-        os.getcwd(), model_training.spec.work_dir, DEFAULT_CONDA_FILE_NAME
-    )
+    work_dir = model_training.spec.work_dir if model_training.spec.work_dir else ""
+
+    default_conda_full_path = os.path.join(os.getcwd(), work_dir, DEFAULT_CONDA_FILE_NAME)
     default_file_exists = os.path.exists(default_conda_full_path)
 
     if not conda_env_configured_explicitly and not default_file_exists:
@@ -113,9 +113,9 @@ def update_model_conda_env(model_training: ModelTraining):
         return
 
     io_proc_utils.run(
-        "conda", "env", "update", "-n", ODAHU_MODEL_CONDA_ENV_NAME,
+        "conda", "update", "-n", ODAHU_MODEL_CONDA_ENV_NAME,
         "-f", _extract_conda_file_name(ml_project),
-        cwd=os.path.join(os.getcwd(), model_training.spec.work_dir)
+        cwd=os.path.join(os.getcwd(), work_dir)
     )
 
 
