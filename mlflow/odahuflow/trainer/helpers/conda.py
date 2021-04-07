@@ -113,7 +113,7 @@ def update_model_conda_env(model_training: ModelTraining):
         return
 
     io_proc_utils.run(
-        "conda", "update", "-n", ODAHU_MODEL_CONDA_ENV_NAME,
+        "conda", "env", "update", "-n", ODAHU_MODEL_CONDA_ENV_NAME,
         "-f", _extract_conda_file_name(ml_project),
         cwd=os.path.join(os.getcwd(), work_dir)
     )
