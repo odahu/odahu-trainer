@@ -29,7 +29,7 @@ from urllib import parse
 import yaml
 from odahuflow.sdk.gppi.executor import GPPITrainedModelBinary
 from odahuflow.sdk.gppi.models import OdahuflowProjectManifest, OdahuflowProjectManifestBinaries, \
-    OdahuflowProjectManifestModel, OdahuflowProjectManifestToolchain
+    OdahuflowProjectManifestModel, OdahuflowProjectManifestToolchain, OdahuflowProjectManifestOutput
 from odahuflow.sdk.models import K8sTrainer, ModelIdentity
 from odahuflow.sdk.models import ModelTraining
 
@@ -95,7 +95,7 @@ def save_models(mlflow_run_id: str, model_training: ModelTraining, target_direct
     if len(found_models) != 1:
         raise ValueError(f'Expected to find exactly 1 model, found {len(found_models)}')
 
-    mlflow_to_gppi(model_training.spec.model, found_models[0], target_directory)
+    mlflow_to_gppi(model_training.spec.model, found_models[0], target_directory, mlflow_run_id)
 
 
 def load_pyfunc_model(path: str, none_on_failure=False) -> Optional[mlflow.models.Model]:
@@ -117,11 +117,12 @@ def load_pyfunc_model(path: str, none_on_failure=False) -> Optional[mlflow.model
     return mlflow_model
 
 
-def mlflow_to_gppi(model_meta: ModelIdentity, mlflow_model_path: str, gppi_model_path: str):
+def mlflow_to_gppi(model_meta: ModelIdentity, mlflow_model_path: str, gppi_model_path: str, mlflow_run_id: str):
     """Wraps an MLFlow model with a GPPI interface
     :param model_meta: container for model name and version
     :param mlflow_model_path: path to MLFlow model
     :param gppi_model_path: path to target GPPI directory, should be empty
+    :param mlflow_run_id: mlflow run id for model
     """
     try:
         mlflow_model = load_pyfunc_model(mlflow_model_path)
@@ -167,6 +168,9 @@ def mlflow_to_gppi(model_meta: ModelIdentity, mlflow_model_path: str, gppi_model
         toolchain=OdahuflowProjectManifestToolchain(
             name='mlflow',
             version=mlflow.__version__
+        ),
+        output=OdahuflowProjectManifestOutput(
+            run_id=mlflow_run_id
         )
     )
 
@@ -280,6 +284,7 @@ def mlflow_to_gppi_cli():
                         type=dir_type, help='Path to source MLFlow model directory')
     parser.add_argument('--gppi-model-path', '--gppi', required=True,
                         type=str, help='Path to result GPPI model directory')
+    parser.add_argument('--mlflow-run-id', type=str, required=True, help='Run ID for MLFlow model')
     parser.add_argument('--no-tgz', dest='tgz', action='store_false', help='Prevent archiving result directory')
     args = parser.parse_args()
 
@@ -294,7 +299,8 @@ def mlflow_to_gppi_cli():
     try:
         mlflow_to_gppi(model_meta=ModelIdentity(name=args.model_name.strip(), version=args.model_version.strip()),
                        mlflow_model_path=args.mlflow_model_path,
-                       gppi_model_path=gppi_model_path)
+                       gppi_model_path=gppi_model_path,
+                       mlflow_run_id=args.mlflow_run_id)
 
         if args.tgz:
             with _remember_cwd(), tarfile.open(f'{gppi_model_path}.tgz', 'w:gz') as tar:  # type: tarfile.TarFile
