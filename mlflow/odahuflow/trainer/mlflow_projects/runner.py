@@ -27,6 +27,7 @@ from odahuflow.trainer.helpers.fs import copytree
 from odahuflow.trainer.helpers.mlflow_helper import parse_model_training_entity, train_models
 
 OUTPUT_DIR = "ODAHUFLOW_OUTPUT_DIR"
+STATIC_ARTIFACTS_DIR = "STATIC_ARTIFACTS_DIR"
 ODAHUFLOW_PROJECT_DESCRIPTION = "odahuflow.project.yaml"
 
 
@@ -58,20 +59,24 @@ def main():
     output_dir = os.environ[OUTPUT_DIR] = tempfile.mkdtemp()
     logging.debug(f"output dir: {output_dir}")
 
-
     try:
         # Parse ModelTraining entity
         model_training = parse_model_training_entity(args.mt_file)
 
+        static_artifacts_dir = os.environ.get(STATIC_ARTIFACTS_DIR)
+        logging.info(f'Static artifacts directory: {static_artifacts_dir}')
+        if static_artifacts_dir:
+            static_artifacts_dir = os.path.join(model_training.model_training.spec.work_dir, static_artifacts_dir)
+
         # Start MLflow training process
         mlflow_run_id = train_models(model_training.model_training)
 
-        # Copy $WORKDIR/data folder to output destination
-        static_artifacts = os.path.join(model_training.model_training.spec.work_dir, "data")
-        if os.path.exists(static_artifacts):
-            copytree(os.path.join(model_training.model_training.spec.work_dir, "data"), output_dir)
+        # Copy STATIC_ARTIFACTS_DIR content to output destination
+        if os.path.isdir(static_artifacts_dir):
+            logging.info(f'Copying content of static artifacts dir {static_artifacts_dir} to output dir {output_dir}')
+            copytree(static_artifacts_dir, output_dir)
         else:
-            logging.info(f'Static artifacts folder: {static_artifacts} folder is empty')
+            logging.error(f'Path not found or not a directory: {static_artifacts_dir}')
 
         # Create model name/version file
         project_file_path = os.path.join(output_dir, ODAHUFLOW_PROJECT_DESCRIPTION)
