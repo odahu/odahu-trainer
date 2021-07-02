@@ -67,11 +67,6 @@ def main():
         logging.info(f'Static artifacts directory: {static_artifacts_dir}')
         if static_artifacts_dir:
             static_artifacts_dir = os.path.join(model_training.model_training.spec.work_dir, static_artifacts_dir)
-
-        static_artifacts_dir = os.environ.get(STATIC_ARTIFACTS_DIR)
-        logging.info(f'Static artifacts directory: {static_artifacts_dir}')
-        if static_artifacts_dir:
-            static_artifacts_dir = os.path.join(model_training.model_training.spec.work_dir, static_artifacts_dir)
             # Copy STATIC_ARTIFACTS_DIR content to output destination
             if os.path.isdir(static_artifacts_dir):
                 logging.info(f'Copying content of static artifacts dir {static_artifacts_dir} to output dir {output_dir}')
