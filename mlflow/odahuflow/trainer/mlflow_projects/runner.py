@@ -69,7 +69,8 @@ def main():
             static_artifacts_dir = os.path.join(model_training.model_training.spec.work_dir, static_artifacts_dir)
             # Copy STATIC_ARTIFACTS_DIR content to output destination
             if os.path.isdir(static_artifacts_dir):
-                logging.info(f'Copying content of static artifacts dir {static_artifacts_dir} to output dir {output_dir}')
+                logging.info(f'Copying content of static artifacts dir {static_artifacts_dir} '
+                             f'to output dir {output_dir}')
                 copytree(static_artifacts_dir, output_dir)
             else:
                 logging.error(f'Path not found or not a directory: {static_artifacts_dir}')
