@@ -40,7 +40,7 @@ def main():
 
         # Force local artifact location to copy local artifacts to GPPI archive
         experiment_id = get_or_create_experiment(model_training.spec.model.name,
-                                                 artifact_location=DEFAULT_LOCAL_FILE_AND_ARTIFACT_PATH)
+                                                 artifact_location='/ml_experiment')
 
         # Start MLflow training process
         mlflow_run_id = train_models(model_training, experiment_id=experiment_id)
