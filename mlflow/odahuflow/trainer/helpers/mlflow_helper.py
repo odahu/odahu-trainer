@@ -183,7 +183,27 @@ def mlflow_to_gppi(model_meta: ModelIdentity, mlflow_model_path: str, gppi_model
     logging.info("GPPI is validated. OK")
 
 
-def train_models(model_training: ModelTraining) -> str:
+def get_or_create_experiment(experiment_name, artifact_location=None) -> str:
+    client = MlflowClient()
+
+    # Registering of experiment on tracking server if it is not exist
+    logging.info(f"Searching for experiment with name {experiment_name}")
+    experiment = client.get_experiment_by_name(experiment_name)
+
+    if experiment:
+        experiment_id = experiment.experiment_id
+        logging.info(f"Experiment {experiment_id} has been found")
+    else:
+        logging.info(f"Creating new experiment with name {experiment_name}")
+
+        experiment_id = client.create_experiment(experiment_name, artifact_location=artifact_location)
+
+        logging.info(f"Experiment {experiment_id} has been created")
+        client.get_experiment_by_name(experiment_name)
+    return experiment_id
+
+
+def train_models(model_training: ModelTraining, experiment_id: str) -> str:
     """
     Start MLfLow run
     """
@@ -198,21 +218,6 @@ def train_models(model_training: ModelTraining) -> str:
 
     logging.info('Creating MLflow client, setting tracking URI')
     set_tracking_uri(tracking_uri)
-    client = MlflowClient(tracking_uri=tracking_uri)
-
-    # Registering of experiment on tracking server if it is not exist
-    logging.info(f"Searching for experiment with name {model_training.spec.model.name}")
-    experiment = client.get_experiment_by_name(model_training.spec.model.name)
-
-    if experiment:
-        experiment_id = experiment.experiment_id
-        logging.info(f"Experiment {experiment_id} has been found")
-    else:
-        logging.info(f"Creating new experiment with name {model_training.spec.model.name}")
-        experiment_id = client.create_experiment(model_training.spec.model.name)
-
-        logging.info(f"Experiment {experiment_id} has been created")
-        client.get_experiment_by_name(model_training.spec.model.name)
 
     # Starting run and awaiting of finish of run
     logging.info(f"Starting MLflow's run function. Parameters: [project directory: {model_training.spec.work_dir}, "
@@ -233,6 +238,7 @@ def train_models(model_training: ModelTraining) -> str:
     run_id = run_mlflow_wrapper(mlflow_input)
 
     # TODO: refactor
+    client = MlflowClient()
     client.set_tag(run_id, "training_id", model_training.id)
     client.set_tag(run_id, "model_name", model_training.spec.model.name)
     client.set_tag(run_id, "model_version", model_training.spec.model.version)
@@ -318,38 +324,3 @@ def mlflow_to_gppi_cli():
             logging.error(error_message)
 
         sys.exit(1)
-
-
-def main():
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--verbose", action='store_true', help="more extensive logging")
-    parser.add_argument("--mt-file", '--mt', type=str, required=True,
-                        help="json/yaml file with a mode training resource")
-    parser.add_argument("--target", type=str, default='mlflow_output',
-                        help="directory where result model will be saved")
-    args = parser.parse_args()
-
-    # Setup logging
-    setup_logging(args)
-    try:
-        # Parse ModelTraining entity
-        model_training = parse_model_training_entity(args.mt_file)
-
-        # Start MLflow training process
-        mlflow_run_id = train_models(model_training.model_training)
-
-        # Save MLflow models as odahuflow artifact
-        save_models(mlflow_run_id, model_training.model_training, args.target)
-    except Exception as e:
-        error_message = f'Exception occurs during model training. Message: {e}'
-
-        if args.verbose:
-            logging.exception(error_message)
-        else:
-            logging.error(error_message)
-
-        sys.exit(2)
-
-
-if __name__ == '__main__':
-    main()
