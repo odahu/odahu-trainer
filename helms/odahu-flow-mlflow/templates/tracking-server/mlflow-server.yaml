@@ -26,6 +26,10 @@ spec:
         {{ toYaml .Values.tracking_server.annotations | nindent 8 }}
       {{- end }}
     spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
       {{- if .Values.serviceAccount.create }}
       serviceAccountName: {{ .Values.serviceAccount.name }}
       {{- end }}
