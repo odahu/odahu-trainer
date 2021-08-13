@@ -21,7 +21,7 @@ ARG PSYCOPG2_VERSION=2.8.6
 ENV MLFLOW_ARTIFACT_ROOT=/mlruns 
 ENV MLFLOW_BACKEND_STORE=/mlruns
 
-RUN pip install --no-cache-dir mlflow==${MLFLOW_VERSION} psycopg2==${PSYCOPG2_VERSION} google-cloud-storage
+RUN pip install --no-cache-dir mlflow==${MLFLOW_VERSION} psycopg2==${PSYCOPG2_VERSION} google-cloud-storage azure-storage-blob
 
 RUN mkdir -p ${MLFLOW_ARTIFACT_ROOT}
 
