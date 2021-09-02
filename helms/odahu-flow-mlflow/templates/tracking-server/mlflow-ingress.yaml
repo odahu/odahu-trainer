@@ -18,7 +18,12 @@ spec:
           - backend:
               serviceName: "mlflow"
               servicePort: {{ .Values.tracking_server.port }}
-            path: {{ .Values.tracking_server.ingress.path }}
+            path: "{{ .Values.tracking_server.ingress.path }}(/api.*)"
+          - backend:
+              serviceName: "mlflow"
+              servicePort: {{ .Values.tracking_server.port }}
+            path: "/kek"
+            path: '/({{ .Values.tracking_server.ingress.path | trimPrefix "/" }}.*)'
   {{- if (ternary $.Values.tracking_server.ingress.tlsEnabled $.Values.ingress.tlsEnabled (hasKey $.Values.tracking_server.ingress "tlsEnabled")) }}
   tls:
   - hosts:

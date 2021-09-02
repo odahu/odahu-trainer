@@ -16,9 +16,11 @@
 import argparse
 import logging
 import sys
+from mlflow.store.tracking import DEFAULT_LOCAL_FILE_AND_ARTIFACT_PATH
 
 from odahuflow.trainer.helpers.log import setup_logging
-from odahuflow.trainer.helpers.mlflow_helper import parse_model_training_entity, train_models, save_models
+from odahuflow.trainer.helpers.mlflow_helper import parse_model_training_entity, train_models, save_models, \
+    get_or_create_experiment
 
 
 def main():
@@ -34,13 +36,17 @@ def main():
     setup_logging(args)
     try:
         # Parse ModelTraining entity
-        model_training = parse_model_training_entity(args.mt_file)
+        model_training = parse_model_training_entity(args.mt_file).model_training
+
+        # Force local artifact location to copy local artifacts to GPPI archive
+        experiment_id = get_or_create_experiment(model_training.spec.model.name,
+                                                 artifact_location='/ml_experiment')
 
         # Start MLflow training process
-        mlflow_run_id = train_models(model_training.model_training)
+        mlflow_run_id = train_models(model_training, experiment_id=experiment_id)
 
         # Save MLflow models as odahuflow artifact
-        save_models(mlflow_run_id, model_training.model_training, args.target)
+        save_models(mlflow_run_id, model_training, args.target)
     except Exception as e:
         error_message = f'Exception occurs during model training. Message: {e}'
 

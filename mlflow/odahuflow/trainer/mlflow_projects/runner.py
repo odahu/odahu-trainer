@@ -24,7 +24,7 @@ import yaml
 from odahuflow.sdk.models import ModelTraining
 from odahuflow.trainer.helpers.log import setup_logging
 from odahuflow.trainer.helpers.fs import copytree
-from odahuflow.trainer.helpers.mlflow_helper import parse_model_training_entity, train_models
+from odahuflow.trainer.helpers.mlflow_helper import parse_model_training_entity, train_models, get_or_create_experiment
 
 OUTPUT_DIR = "ODAHUFLOW_OUTPUT_DIR"
 STATIC_ARTIFACTS_DIR = "STATIC_ARTIFACTS_DIR"
@@ -61,12 +61,12 @@ def main():
 
     try:
         # Parse ModelTraining entity
-        model_training = parse_model_training_entity(args.mt_file)
+        model_training = parse_model_training_entity(args.mt_file).model_training
 
         static_artifacts_dir = os.environ.get(STATIC_ARTIFACTS_DIR)
         logging.info(f'Static artifacts directory: {static_artifacts_dir}')
         if static_artifacts_dir:
-            static_artifacts_dir = os.path.join(model_training.model_training.spec.work_dir, static_artifacts_dir)
+            static_artifacts_dir = os.path.join(model_training.spec.work_dir, static_artifacts_dir)
             # Copy STATIC_ARTIFACTS_DIR content to output destination
             if os.path.isdir(static_artifacts_dir):
                 logging.info(f'Copying content of static artifacts dir {static_artifacts_dir} '
@@ -75,12 +75,14 @@ def main():
             else:
                 logging.error(f'Path not found or not a directory: {static_artifacts_dir}')
 
+        experiment_id = get_or_create_experiment(model_training.spec.model.name)
+
         # Start MLflow training process
-        mlflow_run_id = train_models(model_training.model_training)
+        mlflow_run_id = train_models(model_training, experiment_id=experiment_id)
 
         # Create model name/version file
         project_file_path = os.path.join(output_dir, ODAHUFLOW_PROJECT_DESCRIPTION)
-        create_project_file(model_training.model_training, project_file_path, mlflow_run_id)
+        create_project_file(model_training, project_file_path, mlflow_run_id)
 
         # copy output to target folder
         logging.info('Preparing target directory')

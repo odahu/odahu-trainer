@@ -174,3 +174,13 @@ resource_uploader_sa: {}
 
 # OpenID provider url
 oauth_oidc_issuer_url: ""
+
+imagePullSecrets: {}
+
+serviceAccount:
+  # Specifies whether a service account should be created
+  create: true
+  # The name of the service account to use.
+  # If not set and create is true, a name is generated using the fullname template
+  name: mlflow
+  annotations: {}
