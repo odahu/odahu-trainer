@@ -24,7 +24,7 @@ import logging
 import sys
 from typing import Any, Dict
 
-from pkg_resources import require as pkg_resources_require
+from pkg_resources import require as pkg_resources_require, VersionConflict
 from odahuflow.trainer.helpers.wrapper.entities import MLFlowWrapperOutput
 
 import mlflow
@@ -41,7 +41,10 @@ def work(input_file_path: str, output_file_path: str):
     :param output_file_path: file where MLFlow output will be stored
     """
     logging.debug('Validating MLflow version')
-    pkg_resources_require('mlflow >= 1.0, <2.0')
+    try:
+        pkg_resources_require('mlflow >= 1.0, <2.0')
+    except VersionConflict as error:
+        raise ImportError(f'Unsupported version: {error.dist}. Please use {error.req}') from None
 
     logging.debug("Reading mlflow input parameters")
     with open(input_file_path, encoding='utf-8') as f:
