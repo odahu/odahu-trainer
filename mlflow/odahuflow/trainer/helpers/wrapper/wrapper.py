@@ -24,13 +24,15 @@ import logging
 import sys
 from typing import Any, Dict
 
-from odahuflow.trainer.helpers.wrapper.entities import MLFlowWrapperOutput
-from pkg_resources import parse_version
+from pkg_resources import require as pkg_resources_require
+
 import mlflow
 import mlflow.models
 import mlflow.projects
 import mlflow.pyfunc
 import mlflow.tracking
+
+from odahuflow.trainer.helpers.wrapper.entities import MLFlowWrapperOutput
 
 
 def work(input_file_path: str, output_file_path: str):
@@ -41,20 +43,18 @@ def work(input_file_path: str, output_file_path: str):
     :param output_file_path: file where MLFlow output will be stored
     """
     logging.debug('Validating MLflow version')
-    mlflow_version = parse_version(mlflow.__version__)
-    if mlflow_version < parse_version('1.0') or mlflow_version >= parse_version('2.0'):
-        raise Exception(f'Unsupported version {mlflow_version}. Please use MLflow versions >= 1.* but =< 2.* ')
+    pkg_resources_require('mlflow >= 1.0, <2.0')
 
     logging.debug("Reading mlflow input parameters")
-    with open(input_file_path) as f:
+    with open(input_file_path, encoding='utf-8') as f:
         mlflow_input: Dict[str, Any] = json.load(f)
 
-    logging.debug('Validating MLflow version')
+    logging.debug('Running mlflow project')
     run = mlflow.projects.run(
         **mlflow_input
     )
 
-    with open(output_file_path, 'w') as f:
+    with open(output_file_path, 'w', encoding='utf-8') as f:
         json.dump(MLFlowWrapperOutput(run_id=run.run_id)._asdict(), f)
 
 

@@ -71,18 +71,16 @@ def _get_conda_command(conda_env_name):
     #  Checking for newer conda versions
     if os.name != 'nt' and ('CONDA_EXE' in os.environ or 'MLFLOW_CONDA_HOME' in os.environ):
         conda_path = _get_conda_bin_executable("conda")
-        activate_conda_env = [
-            'source {}/../etc/profile.d/conda.sh'.format(os.path.dirname(conda_path))
-        ]
-        activate_conda_env += ["conda activate {} 1>&2".format(conda_env_name)]
+        activate_conda_env = f'source {os.path.dirname(conda_path)}/../etc/profile.d/conda.sh'
+        activate_conda_env += f'conda activate {conda_env_name} 1>&2'
     else:
         activate_path = _get_conda_bin_executable("activate")
         # in case os name is not 'nt', we are not running on windows. It introduces
         # bash command otherwise.
-        if os.name != "nt":
-            return ["source %s %s 1>&2" % (activate_path, conda_env_name)]
+        if os.name != 'nt':
+            return f'source {activate_path} {conda_env_name} 1>&2'
         else:
-            return ["conda activate %s" % (conda_env_name)]
+            return f'conda activate {conda_env_name}'
     return activate_conda_env
 
 
@@ -93,7 +91,7 @@ def update_model_conda_env(model_training: ModelTraining):
     """
 
     mlproject_file_path = _find_mlproject_file_path(model_training)
-    with open(mlproject_file_path) as f:
+    with open(mlproject_file_path, encoding='utf-8') as f:
         ml_project = yaml.load(f)
 
     conda_env_configured_explicitly = ml_project.get("conda_env") is not None
@@ -125,7 +123,7 @@ def run_mlflow_wrapper(mlflow_input: Dict[str, Any]) -> str:
     :param mlflow_input: parameters which will be passed to mlflow.run function
     :return: MLFlow run ID
     """
-    with open(MLFLOW_WRAPPER_INPUT_FILE_PATH, 'w') as f:
+    with open(MLFLOW_WRAPPER_INPUT_FILE_PATH, 'w', encoding='utf-8') as f:
         json.dump(mlflow_input, f)
 
     sep = ' && '
@@ -139,5 +137,5 @@ def run_mlflow_wrapper(mlflow_input: Dict[str, Any]) -> str:
 
     io_proc_utils.run('bash', '-c', command)
 
-    with open(MLFLOW_WRAPPER_OUTPUT_FILE_PATH) as f:
+    with open(MLFLOW_WRAPPER_OUTPUT_FILE_PATH, encoding='utf-8') as f:
         return MLFlowWrapperOutput(**json.load(f)).run_id

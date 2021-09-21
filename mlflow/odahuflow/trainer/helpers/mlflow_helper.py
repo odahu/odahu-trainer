@@ -59,7 +59,7 @@ def parse_model_training_entity(source_file: str) -> K8sTrainer:
     if not os.path.exists(source_file) or not os.path.isfile(source_file):
         raise ValueError(f'File {source_file} is not readable')
 
-    with open(source_file, 'r') as mt_file:
+    with open(source_file, 'r', encoding='utf-8') as mt_file:
         mt = mt_file.read()
         logging.debug(f'Content of {source_file}:\n{mt}')
 
@@ -174,7 +174,7 @@ def mlflow_to_gppi(model_meta: ModelIdentity, mlflow_model_path: str, gppi_model
         )
     )
 
-    with open(project_file_path, 'w') as proj_stream:
+    with open(project_file_path, 'w', encoding='utf-8') as proj_stream:
         yaml.dump(manifest.dict(), proj_stream)
 
     logging.info("GPPI stored. Starting GPPI validation")
