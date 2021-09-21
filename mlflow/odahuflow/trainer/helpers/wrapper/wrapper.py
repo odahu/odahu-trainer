@@ -25,15 +25,13 @@ import sys
 from typing import Any, Dict
 
 from pkg_resources import require as pkg_resources_require
+from odahuflow.trainer.helpers.wrapper.entities import MLFlowWrapperOutput
 
 import mlflow
 import mlflow.models
 import mlflow.projects
 import mlflow.pyfunc
 import mlflow.tracking
-
-from odahuflow.trainer.helpers.wrapper.entities import MLFlowWrapperOutput
-
 
 def work(input_file_path: str, output_file_path: str):
     """
