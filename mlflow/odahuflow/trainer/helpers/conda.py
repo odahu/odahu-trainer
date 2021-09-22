@@ -71,16 +71,16 @@ def _get_conda_command(conda_env_name):
     #  Checking for newer conda versions
     if os.name != 'nt' and ('CONDA_EXE' in os.environ or 'MLFLOW_CONDA_HOME' in os.environ):
         conda_path = _get_conda_bin_executable("conda")
-        activate_conda_env = f'source {os.path.dirname(conda_path)}/../etc/profile.d/conda.sh'
-        activate_conda_env += f'conda activate {conda_env_name} 1>&2'
+        activate_conda_env = [f'source {os.path.dirname(conda_path)}/../etc/profile.d/conda.sh']
+        activate_conda_env += [f'conda activate {conda_env_name} 1>&2']
     else:
         activate_path = _get_conda_bin_executable("activate")
         # in case os name is not 'nt', we are not running on windows. It introduces
         # bash command otherwise.
         if os.name != 'nt':
-            return f'source {activate_path} {conda_env_name} 1>&2'
+            return [f'source {activate_path} {conda_env_name} 1>&2']
         else:
-            return f'conda activate {conda_env_name}'
+            return [f'conda activate {conda_env_name}']
     return activate_conda_env
 
 
