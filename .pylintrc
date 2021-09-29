@@ -10,14 +10,15 @@ const-rgx=(([A-Z_][A-Za-z0-9_]*)|(__.*__))$
 notes=
 
 [MESSAGES CONTROL]
+# W1201 - Specify string format arguments as logging function parameters
 # W1202 - Use % formatting in logging functions and pass the % parameters as arguments
+# W1203 - Use % formatting in logging functions and pass the % parameters as arguments
 # C0330 - wrong continued indentation
 # R1710 - Either all return statements in a function should return an expression, or none of them should.
 # R0201 - method could be a function
 # R0913 - Too many arguments
 # R1705 - Unnecessary else after return
 # W0603 - Using the global statement
-# W1201 - Specify string format arguments as logging function parameters
 # W0212 - Access to a protected member _content of a client class
 # W0107 - Unnecessary pass statement
 # C0103 - Variable name doesn't conform to snake_case naming style
@@ -33,7 +34,6 @@ notes=
 # R0401 - Cyclic import
 # W0703 - Catching too general exception
 # R1720 - no-else-raise
-# W1203 - Use % formatting in logging functions and pass the % parameters as arguments
 disable=R1720,W1202,C0330,R1710,R0201,R0913,R1705,W0603,W1201,W0212,W0107,C0103,R0914,R0902,R0903,R0904,R0801,R0915,C0111,C0413,R0912,R0401,W0703,W1203
 good-names=blueprint,id
 ignored-modules=responses,distutils,distutils.dir_util

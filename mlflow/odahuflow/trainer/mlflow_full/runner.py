@@ -16,7 +16,6 @@
 import argparse
 import logging
 import sys
-from mlflow.store.tracking import DEFAULT_LOCAL_FILE_AND_ARTIFACT_PATH
 
 from odahuflow.trainer.helpers.log import setup_logging
 from odahuflow.trainer.helpers.mlflow_helper import parse_model_training_entity, train_models, save_models, \
