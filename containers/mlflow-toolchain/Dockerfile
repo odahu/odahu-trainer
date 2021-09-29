@@ -29,7 +29,6 @@ RUN . /opt/conda/etc/profile.d/conda.sh \
     && conda activate base \
     && pip install --upgrade pip setuptools wheel \
     && pip install -r "${ODAHUFLOW_DIR}/requirements.txt" \
-    && pip install -e "${ODAHUFLOW_DIR}"
 
 COPY mlflow/ "${ODAHUFLOW_DIR}/"
 RUN . /opt/conda/etc/profile.d/conda.sh && \
