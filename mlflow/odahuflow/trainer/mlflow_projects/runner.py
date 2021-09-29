@@ -33,7 +33,7 @@ ODAHUFLOW_PROJECT_DESCRIPTION = "odahuflow.project.yaml"
 
 def create_project_file(model_training: ModelTraining, project_file_path: str, mlflow_run_id: str):
 
-    with open(project_file_path, 'w') as proj_stream:
+    with open(project_file_path, 'w', encoding='utf-8') as proj_stream:
         data = {
             'name': model_training.spec.model.name,
             'version': model_training.spec.model.version,

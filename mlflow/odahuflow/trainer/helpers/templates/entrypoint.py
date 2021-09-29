@@ -75,7 +75,7 @@ def init() -> str:
     """
     model = mlflow.models.Model.load(MODEL_LOCATION)
     if mlflow.pyfunc.FLAVOR_NAME not in model.flavors:
-        raise ValueError('{} not in model\'s flavors'.format(mlflow.pyfunc.FLAVOR_NAME))
+        raise ValueError(f'{mlflow.pyfunc.FLAVOR_NAME} not in model\'s flavors')
 
     global MODEL_FLAVOR
     MODEL_FLAVOR = mlflow.pyfunc.load_model(MODEL_LOCATION)
