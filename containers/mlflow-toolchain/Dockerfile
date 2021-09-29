@@ -26,9 +26,10 @@ RUN apt-get update --fix-missing && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 
-# add model conda env to PATH
+# Create empty conda environemnt for a model dependencies
 ENV ODAHU_CONDA_ENV_NAME=odahu_model
 ENV PATH=/opt/conda/envs/${ODAHU_CONDA_ENV_NAME}/bin:$PATH
+RUN conda create --name ${ODAHU_CONDA_ENV_NAME} python --no-default-packages
 
 COPY mlflow/requirements.txt "${ODAHUFLOW_DIR}/"
 RUN . /opt/conda/etc/profile.d/conda.sh && \
