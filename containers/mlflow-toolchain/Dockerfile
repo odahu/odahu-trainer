@@ -20,7 +20,9 @@ FROM continuumio/miniconda3:${MINICONDA_VERSION}
 ARG ODAHUFLOW_DIR=/opt/odahu-flow
 
 RUN apt-get update --fix-missing && \
-    apt-get install -y wget git gfortran && \
+    apt-get install -y wget git \
+            # numpy install requirements
+            gfortran && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 
