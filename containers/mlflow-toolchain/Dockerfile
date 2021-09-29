@@ -19,17 +19,16 @@ FROM continuumio/miniconda3:${MINICONDA_VERSION}
 
 ARG ODAHUFLOW_DIR=/opt/odahu-flow
 
+ENV LANG=C.UTF-8 LC_ALL=C.UTF-8 \
+    PATH="/usr/local/nvidia/bin:/opt/conda/bin:${PATH}" \
+    LD_LIBRARY_PATH="/usr/local/nvidia/lib64:${LD_LIBRARY_PATH}"
+
 RUN apt-get update --fix-missing && \
     apt-get install -y wget git \
             # numpy install requirements
             gfortran && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
-
-# Create empty conda environemnt for a model dependencies
-ENV ODAHU_CONDA_ENV_NAME=odahu_model
-ENV PATH=/opt/conda/envs/${ODAHU_CONDA_ENV_NAME}/bin:$PATH
-RUN conda create --name ${ODAHU_CONDA_ENV_NAME} python --no-default-packages
 
 COPY mlflow/requirements.txt "${ODAHUFLOW_DIR}/"
 RUN . /opt/conda/etc/profile.d/conda.sh && \
