@@ -14,11 +14,11 @@
 #    limitations under the License.
 #
 
-ARG MINICONDA_VERSION=latest
-FROM continuumio/miniconda3:${MINICONDA_VERSION}
+FROM continuumio/miniconda3:4.10.3
 
 ARG ODAHUFLOW_DIR=/opt/odahu-flow
 
+# nvidia CUDA needed for tensorflow-gpu
 ENV LANG=C.UTF-8 LC_ALL=C.UTF-8 \
     PATH="/usr/local/nvidia/bin:/opt/conda/bin:${PATH}" \
     LD_LIBRARY_PATH="/usr/local/nvidia/lib64:${LD_LIBRARY_PATH}"
@@ -33,12 +33,12 @@ RUN apt-get update --fix-missing && \
 COPY mlflow/requirements.txt "${ODAHUFLOW_DIR}/"
 RUN . /opt/conda/etc/profile.d/conda.sh && \
     conda activate base && \
-    pip install --upgrade pip setuptools wheel && \
-    pip install -r "${ODAHUFLOW_DIR}/requirements.txt"
+    python3 -m pip install --upgrade pip setuptools wheel && \
+    python3 -m pip install -r "${ODAHUFLOW_DIR}/requirements.txt"
 
 COPY mlflow/ "${ODAHUFLOW_DIR}/"
 RUN . /opt/conda/etc/profile.d/conda.sh && \
     conda activate base && \
-    pip install -e "${ODAHUFLOW_DIR}"
+    python3 -m pip install -e "${ODAHUFLOW_DIR}"
 
 CMD [ "/bin/bash" ]
