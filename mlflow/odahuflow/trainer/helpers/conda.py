@@ -92,7 +92,7 @@ def update_model_conda_env(model_training: ModelTraining):
 
     mlproject_file_path = _find_mlproject_file_path(model_training)
     with open(mlproject_file_path, encoding='utf-8') as f:
-        ml_project = yaml.load(f)
+        ml_project = yaml.safe_load(f)
 
     conda_env_configured_explicitly = ml_project.get("conda_env") is not None
 
