@@ -17,6 +17,7 @@
 FROM ubuntu:18.04
 
 ARG MINICONDA_URL=https://repo.anaconda.com/miniconda/Miniconda3-4.7.12-Linux-x86_64.sh
+ARG CONDA_ENV_PY_VERSION=3.9
 ARG ODAHUFLOW_DIR=/opt/odahu-flow
 ARG PIP_EXTRA_INDEX_URL
 
@@ -41,17 +42,17 @@ RUN wget --quiet ${MINICONDA_URL} -O ~/miniconda.sh && \
 # Create empty conda environemnt for a model dependencies
 ENV ODAHU_CONDA_ENV_NAME=odahu_model
 ENV PATH=/opt/conda/envs/${ODAHU_CONDA_ENV_NAME}/bin:$PATH
-RUN conda create --name ${ODAHU_CONDA_ENV_NAME} python --no-default-packages
+RUN conda create --name ${ODAHU_CONDA_ENV_NAME} python=${CONDA_ENV_PY_VERSION} --no-default-packages
 
 COPY mlflow/requirements.txt "${ODAHUFLOW_DIR}/"
 RUN . /opt/conda/etc/profile.d/conda.sh && \
     conda activate base && \
-    pip install --upgrade pip setuptools wheel && \
-    pip install --use-feature=2020-resolver -r "${ODAHUFLOW_DIR}/requirements.txt"
+    python3 -m pip install --upgrade pip setuptools wheel && \
+    python3 -m pip install -r "${ODAHUFLOW_DIR}/requirements.txt"
 
 COPY mlflow/ "${ODAHUFLOW_DIR}/"
 RUN . /opt/conda/etc/profile.d/conda.sh && \
     conda activate base && \
-    pip install --use-feature=2020-resolver  -e "${ODAHUFLOW_DIR}"
+    python3 -m pip install -e "${ODAHUFLOW_DIR}"
 
 CMD [ "/bin/bash" ]
