@@ -108,7 +108,7 @@ pipeline {
                 stage("Build training integration Docker image"){
                     steps {
                         script {
-                            cicdLibrary.buildDockerImage('odahu-flow-mlflow-training-integration', '.', 'containers/mlflow-training-integration/Dockerfile')
+                            cicdLibrary.buildDockerImage('odahu-flow-mlflow-trainer-integration', '.', 'containers/mlflow-trainer-integration/Dockerfile')
                         }
                     }
                 }
@@ -140,7 +140,7 @@ pipeline {
                 stage("Upload training integration Docker image"){
                     steps {
                         script {
-                            cicdLibrary.uploadDockerImage('odahu-flow-mlflow-training-integration', env.param_stable_release.toBoolean() && env.param_dockerhub_publishing_enabled.toBoolean())
+                            cicdLibrary.uploadDockerImage('odahu-flow-mlflow-trainer-integration', env.param_stable_release.toBoolean() && env.param_dockerhub_publishing_enabled.toBoolean())
                         }
                     }
                 }

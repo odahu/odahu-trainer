@@ -8,7 +8,7 @@ PIP_EXTRA_INDEX_URL=
 
 ## docker-build-mlflow-trainer-integration: Build MLFlow trainer integration docker image
 docker-build-mlflow-trainer-integration:
-	docker build --build-arg PIP_EXTRA_INDEX_URL=${PIP_EXTRA_INDEX_URL} -t odahu/odahu-flow-mlflow-trainer-integration:${TAG} -f containers/mlflow-training-integration/Dockerfile .
+	docker build --build-arg PIP_EXTRA_INDEX_URL=${PIP_EXTRA_INDEX_URL} -t odahu/odahu-flow-mlflow-trainer-integration:${TAG} -f containers/mlflow-trainer-integration/Dockerfile .
 
 ## docker-build-mlflow-tracking-server: Build MLFlow docker image
 docker-build-mlflow-tracking-server:
