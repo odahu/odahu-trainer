@@ -6,9 +6,9 @@ PIP_EXTRA_INDEX_URL=
 -include .env
 .EXPORT_ALL_VARIABLES:
 
-## docker-build-mlflow-toolchain: Build MLFlow toolchain docker image
-docker-build-mlflow-toolchain:
-	docker build --build-arg PIP_EXTRA_INDEX_URL=${PIP_EXTRA_INDEX_URL} -t odahu/odahu-flow-mlflow-toolchain:${TAG} -f containers/mlflow-toolchain/Dockerfile .
+## docker-build-mlflow-trainer-integration: Build MLFlow trainer integration docker image
+docker-build-mlflow-trainer-integration:
+	docker build --build-arg PIP_EXTRA_INDEX_URL=${PIP_EXTRA_INDEX_URL} -t odahu/odahu-flow-mlflow-trainer-integration:${TAG} -f containers/mlflow-training-integration/Dockerfile .
 
 ## docker-build-mlflow-tracking-server: Build MLFlow docker image
 docker-build-mlflow-tracking-server:
@@ -49,7 +49,7 @@ run-mflow-sandbox:
 	  -v `pwd`:/ex \
 	  -v `pwd`:/legion-cmd \
 	  -w /ex \
-	  odahu/mlflow-toolchain:${TAG} bash
+	  odahu/mlflow-trainer-integration:${TAG} bash
 
 ## helm-delete-mflow: Delete mlflow helm release
 helm-delete-mflow:

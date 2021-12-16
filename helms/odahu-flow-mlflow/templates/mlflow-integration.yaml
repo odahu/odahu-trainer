@@ -1,4 +1,4 @@
-{{- if .Values.toolchain_integration.enabled -}}
+{{- if .Values.trainer_integration.enabled -}}
 kind: ConfigMap
 apiVersion: v1
 metadata:
@@ -7,20 +7,20 @@ metadata:
     {{- include "odahuflow.helm-labels" . | nindent 4 }}
 data:
   resources.yaml: |
-    kind: ToolchainIntegration
+    kind: TrainerIntegration
     id: mlflow
     spec:
       additionalEnvironments:
         MLFLOW_TRACKING_URI: http://mlflow.{{ .Release.Namespace }}.svc.cluster.local
-      defaultImage: "{{ include "odahuflow.image-name" (dict "root" . "service" .Values.tracking_server "tpl" "%sodahu-flow-mlflow-toolchain:%s") }}"
+      defaultImage: "{{ include "odahuflow.image-name" (dict "root" . "service" .Values.tracking_server "tpl" "%sodahu-flow-mlflow-trainer-integration:%s") }}"
       entrypoint: /opt/conda/bin/odahu-flow-mlflow-runner
     ---
-    kind: ToolchainIntegration
+    kind: TrainerIntegration
     id: mlflow-project
     spec:
       additionalEnvironments:
         MLFLOW_TRACKING_URI: http://mlflow.{{ .Release.Namespace }}.svc.cluster.local
-      defaultImage: "{{ include "odahuflow.image-name" (dict "root" . "service" .Values.tracking_server "tpl" "%sodahu-flow-mlflow-toolchain:%s") }}"
+      defaultImage: "{{ include "odahuflow.image-name" (dict "root" . "service" .Values.tracking_server "tpl" "%sodahu-flow-mlflow-trainer-integration:%s") }}"
       entrypoint: /opt/conda/bin/odahu-flow-mlflow-project-runner
 ---
 apiVersion: batch/v1

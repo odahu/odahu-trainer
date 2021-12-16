@@ -29,7 +29,7 @@ from urllib import parse
 import yaml
 from odahuflow.sdk.gppi.executor import GPPITrainedModelBinary
 from odahuflow.sdk.gppi.models import OdahuflowProjectManifest, OdahuflowProjectManifestBinaries, \
-    OdahuflowProjectManifestModel, OdahuflowProjectManifestToolchain, OdahuflowProjectManifestOutput
+    OdahuflowProjectManifestModel, OdahuflowProjectManifestTrainerIntegration, OdahuflowProjectManifestOutput
 from odahuflow.sdk.models import K8sTrainer, ModelIdentity
 from odahuflow.sdk.models import ModelTraining
 
@@ -165,7 +165,7 @@ def mlflow_to_gppi(model_meta: ModelIdentity, mlflow_model_path: str, gppi_model
             workDir=MODEL_SUBFOLDER,
             entrypoint='entrypoint'
         ),
-        toolchain=OdahuflowProjectManifestToolchain(
+        trainer_integration=OdahuflowProjectManifestTrainerIntegration(
             name='mlflow',
             version=mlflow.__version__
         ),

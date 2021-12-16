@@ -1,7 +1,7 @@
-# Version of Toolchain
+# Version of Trainer Integration
 # By default .Chart.AppVersion version is used
 # Type: string
-# toolchainVersion: "1.0"
+# trainerIntegrationVersion: "1.0"
 
 # Docker images registry
 # This registry will be used for automatic docker image name deduction based on odahu-flow naming for images
@@ -154,9 +154,9 @@ tracking_server:
     # Type: string
     path: /mlflow
 
-# Toolchain Integration entity configuration
-toolchain_integration:
-  # Toolchain Integration might be disabled
+# Trainer Integration entity configuration
+trainer_integration:
+  # Trainer Integration might be disabled
   # Type: bool
   enabled: true
 

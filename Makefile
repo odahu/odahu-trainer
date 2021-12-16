@@ -19,12 +19,12 @@ check-vulnerabilities:
 
 ## docker-build: Build docker image
 docker-build:
-	docker build -t odahu/odahu-flow-mlflow-toolchain:${BUILD_TAG} -f containers/mlflow-toolchain/Dockerfile .
+	docker build -t odahu/odahu-flow-mlflow-training-integration:${BUILD_TAG} -f containers/mlflow-training-integration/Dockerfile .
 
 ## docker-push-api: Push docker image
 docker-push:
-	docker tag odahu/odahu-flow-mlflow-toolchain:${BUILD_TAG} ${DOCKER_REGISTRY}/odahu/odahu-flow-mlflow-toolchain:${TAG}
-	docker push ${DOCKER_REGISTRY}/odahu/odahu-flow-mlflow-toolchain:${TAG}
+	docker tag odahu/odahu-flow-mlflow-training-integration:${BUILD_TAG} ${DOCKER_REGISTRY}/odahu/odahu-flow-mlflow-training-integration:${TAG}
+	docker push ${DOCKER_REGISTRY}/odahu/odahu-flow-mlflow-training-integration:${TAG}
 
 ## help: Show the help message
 help: Makefile

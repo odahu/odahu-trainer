@@ -39,7 +39,7 @@ jobs:
       - run:
           name: Build
           command: |
-            make docker-build-mlflow-toolchain
+            make docker-build-mlflow-trainer-integration
             make docker-build-mlflow-tracking-server
 
 workflows:
