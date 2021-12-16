@@ -6,13 +6,13 @@
 
 {{/*
 Function builds application (not HELM) version string
-This section is under control by .trainerIntegrationVersion section
+This section is under control by .trainingIntegrationVersion section
 By default value from $.Chart.AppVersion is used
 Arguments:
     - . - root HELM scope
 */}}
 {{- define "odahuflow.application-version" -}}
-{{ default .Chart.AppVersion .Values.trainerIntegrationVersion }}
+{{ default .Chart.AppVersion .Values.trainingIntegrationVersion }}
 {{- end -}}
 
 {{/*
